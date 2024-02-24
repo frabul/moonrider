@@ -1,4 +1,6 @@
 import { PUNCH_OFFSET, SWORD_OFFSET } from './beat-generator';
+import { HitChecker } from './hit-checker';
+
 const COLORS = require('../constants/colors.js');
 
 const auxObj3D = new THREE.Object3D();
@@ -160,7 +162,12 @@ AFRAME.registerComponent('beat-system', {
         beatsToCheck[i].autoHit(this.weapons[0].el);
         continue;
       }
-      this.checkCollision(beatsToCheck[i], this.weapons[0], this.weapons[1]);
+      //this.checkCollision(beatsToCheck[i], this.weapons[0], this.weapons[1]);
+      beatsToCheck[i].hitCheckers.forEach(hitChecker => {
+        if (hitChecker.IsHit(t) && hitChecker.HitIsGood) {
+          beatsToCheck[i].onHit(hitChecker.blade.el);
+        }
+      });
     }
   },
 
@@ -260,7 +267,11 @@ AFRAME.registerComponent('beat-system', {
   })(),
 
   registerBeat: function (beatComponent) {
+    beatComponent.hitCheckers = this.blades.map(blade => {
+      return new HitChecker(blade, beatComponent, true);
+    });
     this.beats.push(beatComponent);
+
   },
 
   unregisterBeat: function (beatComponent) {
@@ -298,8 +309,9 @@ AFRAME.registerComponent('beat', {
     this.mineParticles = document.getElementById('mineParticles');
     this.rigContainer = document.getElementById('rigContainer');
     this.superCuts = document.querySelectorAll('.superCutFx');
-
     this.verticalPositions = this.beatSystem.verticalPositions;
+
+
 
     this.explodeEventDetail = {
       beatDirection: '',
@@ -321,6 +333,14 @@ AFRAME.registerComponent('beat', {
     } else {
       this.poolName = `pool__beat-${this.data.type}-${this.data.color}`;
     }
+    // for each beat let's create a plane to project the blade pointer to
+    // on that plane is also project the beat bounding box ( as a rectangle )
+    this.hitPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);  // it is a vertical plane that sits just behind the beat 
+    // for debug add a-plane to this entity
+    var plane = document.createElement('a-plane');
+    plane.setAttribute('scale', '0.29 0.29 0.29');
+    this.el.appendChild(plane);
+
   },
 
   tick: function (time, timeDelta) {
@@ -356,6 +376,9 @@ AFRAME.registerComponent('beat', {
       this.returnToPool();
       this.missHit();
     }
+
+
+
   },
 
   /**
@@ -482,7 +505,9 @@ AFRAME.registerComponent('beat', {
       weaponEl.components.trail.pulse();
     }
   },
-
+  isDot : function(){
+    return this.data.type === DOT;
+  },
   /**
    * Check if need to return to pool.
    */
@@ -568,7 +593,7 @@ AFRAME.registerComponent('beat', {
   calculateScoreBlade: function (bladeEl, angleDot) {
     const SUPER_SCORE_SPEED = 10;
     const speed = bladeEl.components.blade.strokeSpeed;
-    const speedScore = (bladeEl.components.blade.strokeSpeed / SUPER_SCORE_SPEED) * 30;
+    const speedScore = (speed / SUPER_SCORE_SPEED) * 30;
 
     let score;
     if (speed <= SUPER_SCORE_SPEED) {
@@ -635,7 +660,7 @@ AFRAME.registerComponent('beat', {
  * Load OBJ from already parsed and loaded OBJ template.
  */
 const geometries = {};
-function setObjModelFromTemplate (el, templateId) {
+function setObjModelFromTemplate(el, templateId) {
   // Load into cache.
   if (!geometries[templateId]) {
     const templateEl = document.getElementById(templateId);
@@ -659,12 +684,12 @@ function setObjModelFromTemplate (el, templateId) {
   }
 }
 
-function getElasticEasing (a, p) {
+function getElasticEasing(a, p) {
   return t => 1 - elastic(a, p)(1 - t);
 }
 
-function elastic (amplitude, period) {
-  function minMax (val, min, max) {
+function elastic(amplitude, period) {
+  function minMax(val, min, max) {
     return Math.min(Math.max(val, min), max);
   }
 
@@ -679,10 +704,10 @@ function elastic (amplitude, period) {
   };
 }
 
-function remap (value, low1, high1, low2, high2) {
+function remap(value, low1, high1, low2, high2) {
   return low2 + (high2 - low2) * (value - low1) / (high1 - low1);
 }
 
-function clamp (val, min, max) {
+function clamp(val, min, max) {
   return Math.min(Math.max(val, min), max);
 }
