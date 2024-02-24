@@ -3,8 +3,10 @@ const ANGLE_DOT_SUPER = 0.97; // ~15-degrees.
 const ANGLE_DOT_MIN = 0.625; // ~50-degrees.
 const DIST_FROM_CENTER_MAX = 0.5;
 const DIST_FROM_CENTER_MIN = 0.05;
-export class HitChecker {
-    /// HitChecker is a class that checks if a blade hits a beat
+
+
+export class BladeHitDetector {
+    /// HitDetector is a class that checks if a blade hits a beat
     /// blade is a blade component, beat is beat component 
     constructor(blade, beat, isGood) {
         this.blade = blade;
@@ -16,16 +18,13 @@ export class HitChecker {
         this.HitDetected = false; // meaning that a bad hit or good slice is detected
         this.entryPoint = new THREE.Vector2(); // the point where the blade entered the beat
         this.exitPoint = new THREE.Vector2(); // the point where the blade exited the beat
-        this.bbox = new THREE.Box2(
-            new THREE.Vector2(beat.bbox.min.x, beat.bbox.min.y),
-            new THREE.Vector2(beat.bbox.max.x, beat.bbox.max.y)); // the bounding box of the beat
+        this.bbox = beat.bbox; // the bounding box of the beat
         // buffer variables
         this.bladeTip = new THREE.Vector3();
         this.bladeHandle = new THREE.Vector3();
     }
 
     IsHit(time) {
-
         if (this.HitDetected)
             return true;
 
@@ -37,7 +36,6 @@ export class HitChecker {
             this.HitIsGood = false;
             return true;
         }
-
 
         if (!this.bladeInside) {
             if (bladeEntering) {
@@ -68,7 +66,7 @@ export class HitChecker {
                 // now we must check correctness of the slash
                 // assume that the required diretion is along x axis positive
                 const direction = this.exitPoint.clone().sub(this.entryPoint);
-                const slashSpeed = direction.length() / (time - this.enteringTime) *1000;
+                const slashSpeed = direction.length() / (time - this.enteringTime) * 1000;
                 direction.normalize();
                 const angleDot = direction.dot(new THREE.Vector2(1, 0));
                 if (angleDot > ANGLE_DOT_MIN) {
@@ -125,8 +123,6 @@ export class HitChecker {
 
 
     CalcScore(slashSpeed, angleDot, distFromCenter) {
-
-
         // max 50 points for speed
         var speedScore = (slashSpeed / SUPER_SCORE_SPEED) * 30;
 
@@ -157,11 +153,46 @@ export class HitChecker {
             percent: score / 150
         };
         console.log('Score: ' + score);
+        return this.score;
     }
     reset() {
         this.reaching = [false, false];
         this.bladeInside = false;
         this.HitDetected = false;
+    }
+}
+
+export class PunchHitDetector {
+    constructor(punch, beat, isGood) {
+        this.punch = punch;
+        this.beat = beat;
+        this.isGood = isGood;
+    }
+    IsHit(time) {
+        if (this.HitDetected)
+            return true;
+
+        var hitDetected = this.punch.checkCollision(this.beat);
+        if (hitDetected) { 
+            this.HitDetected = true;
+            this.HitIsGood = true;
+            // calc score 
+            const base = 60; // Get 60% of the score just by hitting the beat.
+            const SUPER_SCORE_SPEED = 1.5;
+            const speed = this.punch.el.components.punch.speed;
+            const speedScore = (speed / SUPER_SCORE_SPEED) * 40;
+
+            let score;
+            if (speed <= SUPER_SCORE_SPEED) {
+                score = base + Math.min(speedScore, 40);
+            } else {
+                score = base + remap(clamp(speed, 1.5, 6), 1.5, 6, 40, 70);
+            }
+
+            const percent = score / (base + 70);
+            this.score = { score: score, percent: percent };
+        }
+        return this.HitDetected;
     }
 }
 
