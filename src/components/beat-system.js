@@ -162,7 +162,7 @@ AFRAME.registerComponent('beat-system', {
         }
 
         // if it is a note
-        if (hitDetector.HitIsGood) {
+        if (hitDetector.score.good) {
             // Haptics only for good hits.
             try {
                 weaponEl.components.haptics__beat.pulse();
@@ -179,13 +179,13 @@ AFRAME.registerComponent('beat-system', {
                     beat.el.object3D, beat.data.color);
                 this.superCutIdx = (this.superCutIdx + 1) % this.superCuts.length;
             }
-            scoreData.good = true;
+
             this.beatEventsQueue.push(scoreData);
         } else {
-            this.beatEventsQueue.push({ good: false });
+            this.beatEventsQueue.push(scoreData);
             beat.wrongHit();
         }
-        beat.destroyBeat(weaponEl, hitDetector.HitIsGood);
+        beat.destroyBeat(weaponEl, scoreData.good);
     },
 
 
@@ -255,7 +255,7 @@ AFRAME.registerComponent('beat-system', {
             // if weaopo is a blade
             if (this.data.gameMode === CLASSIC)
                 return new BladeHitDetector(weapon, beatComponent, isWeaponCorrect);
-            else 
+            else
                 return new PunchHitDetector(weapon, beatComponent, isWeaponCorrect);
         });
         this.beats.push(beatComponent);
