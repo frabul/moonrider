@@ -281,8 +281,17 @@
       geometry="primitive: plane; width: 0.25; height: 0.25;"
       material="shader: flat; src: #stepbackImg; transparent: true; opacity: 0"
       render-order="stepback"></a-entity>
+    <a-entity
+      id="hitsDebug" 
+      bind__text=" value: 'HitData' + hitsDebugString"
+      text="color: white;width: 3.5; align: left; anchor: left"
+    
+      position="-3 2 -3"
+      
+      rotation="-20 0 0"></a-entity>
+      
   </a-entity>
-
+  
   <a-entity
     id="mouseCursor"
     bind__raycaster="enabled: !inVR"
