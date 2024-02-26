@@ -40,6 +40,7 @@ export class BladeHitDetector {
         this.intersection = new THREE.Vector3(); // the intersection point of the blade with the plane of the beat
         this.lastIntersection = new THREE.Vector3(); // the intersection point of the blade with the plane of the beat
         // buffer variables
+        this.tempVec = new THREE.Vector3();
         this.bladeTip = new THREE.Vector3();
         this.bladeVector = new THREE.Vector3();  // it is tip - handle
         this.bladeHandle = new THREE.Vector3();
@@ -110,8 +111,8 @@ export class BladeHitDetector {
                     const t = (this.bbox.min.x - this.lastIntersection.x) / (this.intersection.x - this.lastIntersection.x);
                     const y = this.lastIntersection.y + t * (this.intersection.y - this.lastIntersection.y);
                     // if y is inside the box then we are entering from right side
-                    if (y < this.bbox.min.y && y > this.bbox.max.y) {
-                        this.entryPoint.setState(this.bbox.min.x, y);
+                    if (y > this.bbox.min.y && y < this.bbox.max.y) {
+                        this.entryPoint.set(this.bbox.min.x, y);
                         this.entryTime = (time + this.lastTime) / 2;
                         this.setState(State.InsideBox);
                         return true;
@@ -208,9 +209,8 @@ export class BladeHitDetector {
         // get 50 points for hitting the box
 
 
-        // max 50 points for accuracy
-        const sliceLine = new THREE.Line3(this.entryPoint, this.exitPoint);
-        const distFromCenter = sliceLine.closestPointToPoint(this.bboxcenter, false).distanceTo(this.bboxcenter) / boxWidth;
+        // max 50 points for accuracy 
+        const distFromCenter = distanceFromLine2D(this.bboxcenter, this.entryPoint, this.exitPoint) / boxHeight;
         let min = DIST_FROM_CENTER_MIN * boxHeight;
         let max = DIST_FROM_CENTER_MAX * boxHeight;
         var accuracyScore = remap(clamp(distFromCenter, min, max), min, max, 50, 0);
@@ -222,21 +222,28 @@ export class BladeHitDetector {
         var angleScore = angleDot * 50;
 
         const score = 50 + speedScore + angleScore + accuracyScore;
-        this.score = {
+        this.hitData = {
             good: true,
             score: score,
-            percent: score / 200 * 100
+            percent: score / 200 * 100,
+            speedScore: speedScore,
+            angleScore: angleScore,
+            accuracyScore: accuracyScore,
+            slashSpeed: slashSpeed,
+            angleDot: angleDot
         };
+        this.beat.el.sceneEl.emit('setHitsDebug', this.hitData);
         console.log('Score: ' + score);
-        return this.score;
+        return this.hitData;
     }
     badHit(reason) {
-        this.hitData = { good: false };
-        console.log(reason);
+        this.hitData = { good: false, reason: reason };
+        this.beat.el.sceneEl.emit('setHitsDebug', this.hitData);
     }
     goodHitIfDot() {
         if (this.isGood && this.beat.isDot()) {
             this.hitData = { good: true, score: 200, percent: 100 };
+            this.beat.el.sceneEl.emit('setHitsDebug', this.hitData);
             return true;
         }
         return false;
@@ -289,4 +296,11 @@ function remap(value, low1, high1, low2, high2) {
 
 function clamp(val, min, max) {
     return Math.min(Math.max(val, min), max);
+}
+
+function distanceFromLine2D(p, linePoint1, linePoint2) {
+    const numerator = Math.abs((linePoint2.x - linePoint1.x) * (linePoint1.y - p.y) - (linePoint2.y - linePoint1.y) * (linePoint1.x - p.x));
+    const denominator = Math.sqrt(Math.pow(linePoint2.x - linePoint1.x, 2) + Math.pow(linePoint2.y - linePoint1.y, 2));
+    return numerator / denominator;
+
 }

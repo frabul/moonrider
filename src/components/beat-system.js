@@ -160,9 +160,9 @@ AFRAME.registerComponent('beat-system', {
             this.el.sceneEl.emit('minehit', null, true);
             return;
         }
-
+        const scoreData = hitDetector.hitData;
         // if it is a note
-        if (hitDetector.score.good) {
+        if (scoreData.good) {
             // Haptics only for good hits.
             try {
                 weaponEl.components.haptics__beat.pulse();
@@ -171,7 +171,7 @@ AFRAME.registerComponent('beat-system', {
             }
 
             beat.el.parentNode.components['beat-hit-sound'].playSound(beat.el, beat.cutDirection);
-            const scoreData = hitDetector.score;
+         
 
             // Super FX.
             if (scoreData.percent >= 98) {
