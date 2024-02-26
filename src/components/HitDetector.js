@@ -79,7 +79,7 @@ export class BladeHitDetector {
     handleStateNotReaching() {
         const bladeEntering = this.CheckBladeInside();
         if (bladeEntering) {
-            if (this.goodHitIfDot()) {
+            if (!this.goodHitIfDot()) {
                 // bad hit in any case  except dot box because the blade intered by the tip
                 this.badHit("Tip hit!");
             }
