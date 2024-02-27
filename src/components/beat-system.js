@@ -90,6 +90,9 @@ AFRAME.registerComponent('beat-system', {
         for (let i = 0; i < this.beats.length; i++) {
             const beat = this.beats[i];
 
+            // Check beat is not already destroyed.
+            if (beat.destroyed) { continue; }
+
             // Check if past the camera to return to pool.
             const returnDistance = beat.isMine() ? 0.25 : 1.25;
             if ((beat.el.object3D.position.z - returnDistance) > this.curveFollowRig.object3D.position.z) {
@@ -98,10 +101,7 @@ AFRAME.registerComponent('beat-system', {
                     this.el.sceneEl.emit('beatmiss', null, true);
                 continue;
             }
-
-            // Check beat is not already destroyed.
-            if (beat.destroyed) { continue; }
-
+ 
             // Check if beat is close enough to be hit.
             const beatProgress = beat.songPosition - this.weaponOffset;
             if (progress < beatProgress) { continue; }
@@ -182,8 +182,7 @@ AFRAME.registerComponent('beat-system', {
 
             this.beatEventsQueue.push(scoreData);
         } else {
-            this.beatEventsQueue.push(scoreData);
-            beat.wrongHit();
+            this.beatEventsQueue.push(scoreData); 
         }
         beat.destroyBeat(weaponEl, scoreData.good);
     },
