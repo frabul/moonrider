@@ -17,10 +17,6 @@ import * as THREE from 'three';
 /// blade is a blade component, beat is beat component 
 //// NB: assuming that the hit plane is alwas parallel to XY plane of the beat
 export class BladeHitDetector {
-
-
-
-
     constructor(blade, beat, isGoodTarget) {
         this.blade = blade;
         this.beat = beat;
@@ -74,7 +70,7 @@ export class BladeHitDetector {
         var ret = false
         switch (this.state) {
             case State.NotReaching:
-                this.handleStateNotReaching();
+                this.handleStateNotReaching(time);
                 break;
             case State.Reaching:
                 this.handleStateReaching(time);
@@ -92,20 +88,23 @@ export class BladeHitDetector {
 
     }
 
-    handleStateNotReaching() {
+    handleStateNotReaching(time) {
         const bladeEntering = this.CheckBladeInside();
         if (bladeEntering) {
-            if (!this.goodHitIfDot()) {
-                // bad hit in any case  except dot box because the blade intered by the tip
-                this.badHit("Tip hit!");
+            if (!this.isGood) {
+                this.badHit("Bad target hit!");
+                this.setState(State.Hit);
+            } if (this.goodHitIfDot()) { // if it is a dot then we register a good hit in any case 
+                this.setState(State.Hit);
+            } else {
+                // blade is entering the box 
+                this.entryPoint.copy(this.intersection); // maybe is better to interpolate the position of the blade from previous frame?
+                this.entryTime = this.lastTime && ((time + this.lastTime) / 2) || time;   
+                this.setState(State.InsideBox);
             }
-            this.setState(State.Hit);
-            return true;
         } else if (this.reaching) {
             this.setState(State.Reaching);
-
         }
-        return false;
     }
 
     handleStateReaching(time) {
