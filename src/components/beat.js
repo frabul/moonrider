@@ -101,9 +101,7 @@ AFRAME.registerComponent('beat', {
   tick: function (time, timeDelta) {
     const el = this.el;
     const data = this.data;
-
-
-
+ 
     if (this.destroyed) {
       this.returnToPoolTimer -= timeDelta;
       if (this.returnToPoolTimer <= 0) { this.returnToPool(); }
@@ -201,12 +199,6 @@ AFRAME.registerComponent('beat', {
     //plane.object3D.scale.set(this.bbox.max.x - this.bbox.min.x, this.bbox.max.y - this.bbox.min.y, 1);
     //this.el.appendChild(plane);
   },
-
-  wrongHit: function () {
-    this.destroyed = true;
-  },
-
-
 
   destroyBeat: function (weaponEl, correctHit) {
     const data = this.data;
