@@ -849,7 +849,7 @@ AFRAME.registerState({
 
     setHitsDebug: (state, payload) => {
       if (!state.enableHitsDebug) { return; }
-      state.hitsDebugString = JSON.stringify(payload, null, 2);
+      state.hitsDebugString = "HitDataV7 " + JSON.stringify(payload, null, 2);
     }
 
   },
