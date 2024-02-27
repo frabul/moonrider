@@ -96,12 +96,6 @@ AFRAME.registerComponent('beat', {
     } else {
       this.poolName = `pool__beat-${this.data.type}-${this.data.color}`;
     }
-
-    // for each beat let's create a plane to project the blade pointer to
-    // on that plane is also project the beat bounding box ( as a rectangle )
-    this.hitPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);  // it is a vertical plane that sits just behind the beat 
-    
-
   },
 
   tick: function (time, timeDelta) {
@@ -133,7 +127,7 @@ AFRAME.registerComponent('beat', {
    */
   onGenerate: function (songPosition, horizontalPosition, verticalPosition, cutDirection, heightOffset) {
     const data = this.data;
-    const el = this.el; 
+    const el = this.el;
     // Model is 0.29 size. We make it 1.0 so we can easily scale based on 1m size.
     const FACTOR = 1 / 0.29;
     const size = SIZES[this.beatSystem.data.gameMode] * FACTOR;
@@ -199,7 +193,7 @@ AFRAME.registerComponent('beat', {
     this.bbox = mesh.geometry.boundingBox;
 
     if (this.data.type === 'mine') {
-      this.bbox.expandByScalar(-0.25);
+      this.bbox.scale(0.5, 0.5, 0.5);
     }
 
     // for debug add a-plane to this entity
@@ -269,7 +263,7 @@ AFRAME.registerComponent('beat', {
     this.el.object3D.position.set(0, 0, -9999);
     this.el.object3D.visible = false;
     this.el.sceneEl.components[this.poolName].returnEntity(this.el);
-  },  
+  },
 });
 
 /**
