@@ -206,6 +206,8 @@
   render-order-recursive>
 </a-entity>
 
+<a-mixin id="bigMenuTopButton" mixin="bigMenuButton" geometry="primitive: plane; height: 0.17; width: 0.7"></a-mixin>
+<a-mixin id="bigMenuTopButtonFont" mixin="font" text="width: 0.75" position="0 -0.05 0.01"></a-mixin>
 <a-entity id="backButton" mixin="bigMenuTopButton"
   bind__visible-raycastable="genreMenuOpen || isSearching || difficultyFilterMenuOpen || playlistMenuOpen || optionsMenuOpen"
   position="0 2.32 -1.96" play-sound__hover="event: mouseenter; sound: #hoverSound; volume: 0.1"
@@ -215,8 +217,7 @@
 </a-entity>
 
 <!-- Top menu buttons. -->
-<a-mixin id="bigMenuTopButton" mixin="bigMenuButton" geometry="height: 0.17; width: 0.7"></a-mixin>
-<a-mixin id="bigMenuTopButtonFont" mixin="font" text="width: 0.75" position="0 -0.05 0.01"></a-mixin>
+
 <a-entity id="menuTopButtons"
   animation__position="property: object3D.position.z; to: -1.98; dur: 1500; easing: easeInOutCubic; delay: 300; startEvents: startgame"
   layout="type: line; margin: 0.65" position="-0.95 2.30 -1.96"

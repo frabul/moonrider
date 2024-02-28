@@ -5,7 +5,7 @@ var debug = AFRAME.utils.debug;
 
 var error = debug('aframe-text-component:error');
 
-var fontLoader = new THREE.FontLoader();
+var fontLoader = null;
 
 AFRAME.registerComponent('text-geometry', {
   schema: {
