@@ -104,13 +104,13 @@ export class BladeHitDetector {
 
         // process the artificial frame
         this.processBladePosition(this.artificialBladeData);
-        if(!this.isHitDetected())   
+        if (!this.isHitDetected())
             this.processBladePosition(this.currentBladeData);
         this.lastBladeData = this.currentBladeData;
         return this.isHitDetected();
     }
     isHitDetected() {
-        this.state == State.Hit;
+        return this.state == State.Hit;
     }
     processBladePosition(bladeData) {
         // call the appropriate handler for the current state 
@@ -129,7 +129,7 @@ export class BladeHitDetector {
                 break;
         }
         this.lastTime = bladeData.time;
-       
+
     }
 
     handleStateNotReaching(bladeData) {
@@ -299,7 +299,7 @@ export class BladeHitDetector {
 
             sliceRatio: round_3dec(sliceRatio),
             distFromCenter: round_3dec(distFromCenter),
-            slashSpeed: round_3dec(slashSpeed), 
+            slashSpeed: round_3dec(slashSpeed),
             angleDot: round_3dec(angleDot),
         };
         this.beat.el.sceneEl.emit('setHitsDebug', this.hitData);
