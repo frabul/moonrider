@@ -80,50 +80,6 @@ AFRAME.registerComponent('blade', {
     bladeTipPositions.push(oldest);
   },
 
-  checkCollision: (function () {
-    const bbox = new THREE.Box3();
-    const bladeLocalPositions = [new THREE.Vector3(), new THREE.Vector3(),
-      new THREE.Vector3(), new THREE.Vector3()];
-    const bladeLocalTriangle = new THREE.Triangle();
-    const LEFT = 'left';
-    const RIGHT = 'right';
-
-    return function (beat) {
-      if (this.strokeSpeed < 1) { return false; }
-
-      // Convert points to beat space.
-      for (let i = 0; i < 3; i++) {
-        bladeLocalPositions[i].copy(this.bladeWorldPositions[i]);
-        beat.blockEl.object3D.worldToLocal(bladeLocalPositions[i]);
-        bladeLocalPositions[i].multiplyScalar(1.75);
-      }
-
-      // Current frame triangle.
-      bladeLocalTriangle.set(
-        bladeLocalPositions[0],
-        bladeLocalPositions[1],
-        bladeLocalPositions[2]);
-
-      // Increase hitbox for high beats.
-      bbox.copy(beat.bbox);
-      bbox.expandByScalar(0.02);
-      if (beat.horizontalPosition === LEFT || beat.horizontalPosition === RIGHT) {
-        bbox.expandByScalar(0.07);
-      }
-
-      if (bbox.intersectsTriangle(bladeLocalTriangle)) { return true; }
-
-      // Previous frame triangle.
-      // Only checked if the current frame triangle does not intersect.
-      bladeLocalPositions[3].copy(this.bladeWorldPositions[3]);
-      beat.blockEl.object3D.worldToLocal(bladeLocalPositions[3]);
-      bladeLocalTriangle.set(bladeLocalPositions[2], bladeLocalPositions[3],
-        bladeLocalPositions[0]);
-      if (bbox.intersectsTriangle(bladeLocalTriangle)) { return true; }
-
-      return false;
-    };
-  })(),
 
   createDebugCube: function (v, color) {
     const geo = new THREE.BoxGeometry(0.05, 0.05, 0.05);

@@ -176,7 +176,8 @@ AFRAME.registerState({
       urlPage: 0,
     },
     searchResultsPage: [],
-    speed: 10
+    speed: 10,
+    hitsDebugString: ''
   },
 
   handlers: {
@@ -840,7 +841,17 @@ AFRAME.registerState({
     ziploaderstart: state => {
       state.challenge.isBeatsPreloaded = false;
       state.isZipFetching = true;
+    },
+
+    debughits: state => {
+      state.enableHitsDebug = true;
+    },
+
+    setHitsDebug: (state, payload) => {
+      if (!state.enableHitsDebug) { return; }
+      state.hitsDebugString = "HitDataV7 " + JSON.stringify(payload, null, 2);
     }
+
   },
 
   /**
