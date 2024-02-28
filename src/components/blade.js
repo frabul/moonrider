@@ -11,17 +11,8 @@ AFRAME.registerComponent('blade', {
     const data = this.data;
 
     this.bladeHandle = el.querySelector('.bladeHandleHelper').object3D;
-    this.bladeTip = el.querySelector('.bladeTipHelper').object3D;
-
-    this.rigEl = document.getElementById('curveFollowRig');
-    this.strokeDirectionVector = new THREE.Vector3();
-    this.strokeSpeed = 0;
-    this.bladeBottomPosition = new THREE.Vector3();
-    this.bladeTipPositions = [
-      new THREE.Vector3(), // Oldest.
-      new THREE.Vector3(),
-      new THREE.Vector3() // Most recent.
-    ];
+    this.bladeTip = el.querySelector('.bladeTipHelper').object3D;  
+  
     this.bladeWorldPositions = [
       new THREE.Vector3(), // Current frame tip.
       new THREE.Vector3(), // Current frame handle.
@@ -43,11 +34,9 @@ AFRAME.registerComponent('blade', {
     this.updateVelocity(delta);
   },
 
-  updateVelocity: function (delta) {
-    const bladeTipPositions = this.bladeTipPositions;
+  updateVelocity: function (delta) { 
     const bladeWorldPositions = this.bladeWorldPositions;
-    const data = this.data;
-
+    
     /*
     if (this.el.closest('#rightHand')) {
       this.createDebugCube(this.bladeHandle.getWorldPosition(new THREE.Vector3()), 0xFF0000)
@@ -62,22 +51,7 @@ AFRAME.registerComponent('blade', {
     // Current frame.
     this.bladeTip.getWorldPosition(bladeWorldPositions[0]);
     this.bladeHandle.getWorldPosition(bladeWorldPositions[1]);
-    bladeTipPositions[2].copy(bladeWorldPositions[0]);
-
-    // Cover to rig to calculate stroke direction.
-    this.rigEl.object3D.worldToLocal(bladeTipPositions[2]);
-
-    // Distance covered but the blade tip in one frame.
-    this.strokeDirectionVector.copy(bladeTipPositions[2]).sub(bladeTipPositions[0]);
-    const distance = this.strokeDirectionVector.length();
-    this.strokeSpeed = distance / (delta / 1000);
-
-    this.strokeDirectionVector.z = 0;
-    this.strokeDirectionVector.normalize();
-
-    // Move down the queue. Calculate direction through several frames for less noise.
-    const oldest = bladeTipPositions.shift();
-    bladeTipPositions.push(oldest);
+    
   },
 
 
