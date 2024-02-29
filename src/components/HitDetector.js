@@ -1,18 +1,21 @@
-const speedMin = 5;
-const speedMax = 25;
-const ANGLE_DOT_MAX = 0; // ~15-degrees.
-const ANGLE_DOT_MIN = 0.625; // ~50-degrees.
-const DIST_FROM_CENTER_MAX = 0.5;
-const DIST_FROM_CENTER_MIN = 0.05;
-const minSliceRatio = 0.3;
 
+const sliceRatioBottom = 0.5;
+const sliceRatioTop = 1;
+const angleDotBottom = 0.75;
+const angleDotTop = 0.97;
+const distFromCenterBottom = 0.25;
+const distFromCenterTop = 0.09;
+const slashSpeedBottom = 8;
+const slashSpeedTop = 20;
+
+const ANGLE_DOT_MIN = 0.625; // ~50-degrees.
 
 const State = {
     NotReaching: 0,
     Reaching: 1,
     InsideBox: 2,
     Hit: 3
-} 
+}
 
 export class BladePositionData {
     constructor() {
@@ -62,7 +65,7 @@ export class BladeHitDetector {
         this.lastBladeData = null;
         this.currentBladeData = new BladePositionData();
         this.artificialBladeDataCache = []; // blade data create by interpolating lastBladeData and currentBladeData
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 5; i++) {
             this.artificialBladeDataCache.push(new BladePositionData());
         }
         this.bladeVector = new THREE.Vector3();
@@ -104,15 +107,15 @@ export class BladeHitDetector {
         // if last swing is 'big' then let's syntetize more frames
         const lastSwingDistance = this.lastBladeData.tip.distanceTo(this.currentBladeData.tip);
         let artificialsCount = 0;
-     
-        if (this.lastBladeData.tip.distanceTo(this.currentBladeData.tip) > 0.5 * (this.bbox.max.x - this.bbox.min.x)) {
-            artificialsCount = Math.floor(lastSwingDistance / (0.5 * (this.bbox.max.x - this.bbox.min.x)));
+
+        if (this.lastBladeData.tip.distanceTo(this.currentBladeData.tip) > 0.3 * (this.bbox.max.x - this.bbox.min.x)) {
+            // let's create some artificial frames to increse precision
+            artificialsCount = Math.floor(lastSwingDistance / (0.3 * (this.bbox.max.x - this.bbox.min.x)));
             artificialsCount = Math.min(artificialsCount, this.artificialBladeDataCache.length);
             for (let i = 0; i < artificialsCount; i++) {
-                // let's create an artificial frame  to increse precision
                 const artificialBladeData = this.artificialBladeDataCache[i];
                 const interpRatio = (i + 1) / (artificialsCount + 1);  // if they are 2 then we gate 1/3 and 2/3
-                artificialBladeData.time = (this.currentBladeData.time + this.lastBladeData.time) / interpRatio;
+                artificialBladeData.time = this.lastBladeData.time + interpRatio * (this.currentBladeData.time - this.lastBladeData.time);
                 artificialBladeData.tip.lerpVectors(this.lastBladeData.tip, this.currentBladeData.tip, interpRatio);
                 artificialBladeData.handle.lerpVectors(this.lastBladeData.handle, this.currentBladeData.handle, interpRatio);
             }
@@ -121,7 +124,7 @@ export class BladeHitDetector {
         // process the artificial frames
         for (let i = 0; i < artificialsCount; i++) {
             this.processBladePosition(this.artificialBladeDataCache[i]);
-        } 
+        }
         this.processBladePosition(this.currentBladeData);
 
         this.lastBladeData = this.currentBladeData;
@@ -146,7 +149,7 @@ export class BladeHitDetector {
                 this.handleStateHit(bladeData);
                 break;
         }
-        this.lastTime = bladeData.time; 
+        this.lastTime = bladeData.time;
     }
 
     handleStateNotReaching(bladeData) {
@@ -266,6 +269,8 @@ export class BladeHitDetector {
     }
 
     validateSlice() {
+        const boxHeight = this.bbox.max.y - this.bbox.min.y;
+        const boxWidth = this.bbox.max.x - this.bbox.min.x;
         //   we must still check correctness of the slash
         // assume that the required diretion is along x axis positive
         const direction = this.exitPoint.clone().sub(this.entryPoint);
@@ -273,36 +278,31 @@ export class BladeHitDetector {
         const sliceRatio = direction.x / (this.beat.bbox.max.x - this.beat.bbox.min.x); // how much of the (original) box was sliced
 
         // check slice ratio
-        if (sliceRatio < minSliceRatio) {
+        // get 30 points for hitting the box, 100 for slicing it all
+        if (sliceRatio < 0.2) {
             this.badHit("Bad slice ratio!");
             return;
         }
-        // get 50 points for hitting the box and another 50 for completely slicing it
-        const sliceRatioScore = remap(clamp(sliceRatio, minSliceRatio, 1), minSliceRatio, 1, 50, 100);
+        const sliceRatioScore = clampAndRemap(sliceRatio, sliceRatioBottom, sliceRatioTop, 30, 100);
+
+        // 50 score on direction 
         direction.normalize();
         const angleDot = direction.dot(new THREE.Vector2(1, 0));
         if (angleDot < ANGLE_DOT_MIN) {
             this.badHit("Bad angle!");
             return;
         }
-
-        const boxHeight = this.bbox.max.y - this.bbox.min.y;
-        const boxWidth = this.bbox.max.x - this.bbox.min.x;
-        // get 50 points for hitting the box
+        const angleScore = clampAndRemap(angleDot, angleDotBottom, angleDotTop, 5, 50);
 
 
-        // max 50 points for accuracy 
+        // max 50 points for accuracy  
         const distFromCenter = distanceFromLine2D(this.bboxcenter, this.entryPoint, this.exitPoint) / boxHeight;
-        let min = DIST_FROM_CENTER_MIN * boxHeight;
-        let max = DIST_FROM_CENTER_MAX * boxHeight;
-        const accuracyScore = remap(clamp(distFromCenter, min, max), min, max, 50, 0);
+        const accuracyScore = clampAndRemap(distFromCenter, distFromCenterTop, distFromCenterBottom, 50, 5);
 
         // max 50 points for speed 
-        const speedScore = remap(clamp(slashSpeed, speedMin, speedMax), speedMin, speedMax, 0, 50);
+        const speedScore = clampAndRemap(slashSpeed, slashSpeedBottom, slashSpeedTop, 0, 50);
 
-        // 50 score on direction.
-        const angleScore = angleDot * 50;
-
+        // total score
         const totalScore = sliceRatioScore + speedScore + angleScore + accuracyScore;
 
         this.hitData = {
@@ -396,4 +396,8 @@ function distanceFromLine2D(p, linePoint1, linePoint2) {
 
 function round_3dec(value) {
     return Math.round(value * 1000) / 1000;
+}
+
+function clampAndRemap(value, min, max, low, high) {
+    return remap(clamp(value, min, max), min, max, low, high);
 }
