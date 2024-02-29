@@ -59,7 +59,8 @@ AFRAME.registerComponent('beat', {
   },
 
   init: function () {
-    this.bbox = null;
+    this.bbox = new THREE.Box3();
+    this.geometryBoundingBox = null;
     this.beatSystem = this.el.sceneEl.components['beat-system'];
     this.broken = null;
     this.brokenPoolName = undefined;
@@ -169,7 +170,13 @@ AFRAME.registerComponent('beat', {
     this.positionStart = el.object3D.position.y;
     this.positionChange = this.verticalPositions[verticalPosition] + offset + heightOffset;
 
+    // Set up bounding box, multiply geometry bounding box by size.
+    this.bbox.min.copy(this.geometryBoundingBox.min).multiplyScalar(size);
+    this.bbox.max.copy(this.geometryBoundingBox.max).multiplyScalar(size);
+
+    // Register with beat system.
     this.beatSystem.registerBeat(this);
+
   },
 
   /**
@@ -188,10 +195,10 @@ AFRAME.registerComponent('beat', {
     const mesh = blockEl.getObject3D('mesh');
     mesh.geometry.computeBoundingBox();
 
-    this.bbox = mesh.geometry.boundingBox;
+    this.geometryBoundingBox = mesh.geometry.boundingBox;
 
     if (this.data.type === 'mine') {
-        this.bbox.set(this.bbox.min.multiplyScalar(0.5), this.bbox.max.multiplyScalar(0.5));
+        this.geometryBoundingBox.set(this.geometryBoundingBox.min.multiplyScalar(0.5), this.geometryBoundingBox.max.multiplyScalar(0.5));
     }
 
     // for debug add a-plane to this entity
