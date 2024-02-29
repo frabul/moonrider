@@ -773,6 +773,19 @@ AFRAME.registerState({
       // it contains the min, max, mean, and std deviation for speed, accuracy, dotAngle and sliceRatio
       if (state.enableHitsDebug) {
         const hitsDebugData = {
+          // sliceRatioScore  
+          sliceRatioScoreMean: stats.mean(state.goodHits.map(hit => hit.sliceRatioScore)),
+          sliceRatioScoreStdDev: stats.standardDeviation(state.goodHits.map(hit => hit.sliceRatioScore)),
+          // accuracyScore: round_3dec(accuracyScore),
+          accuracyScoreMean: stats.mean(state.goodHits.map(hit => hit.accuracyScore)),
+          accuracyScoreStdDev: stats.standardDeviation(state.goodHits.map(hit => hit.accuracyScore)),
+          // speedScore: round_3dec(speedScore),
+          speedScoreMean: stats.mean(state.goodHits.map(hit => hit.speedScore)),
+          speedScoreStdDev: stats.standardDeviation(state.goodHits.map(hit => hit.speedScore)),
+          // angleScore: round_3dec(angleScore),
+          angleScoreMean: stats.mean(state.goodHits.map(hit => hit.angleScore)),
+          angleScoreStdDev: stats.standardDeviation(state.goodHits.map(hit => hit.angleScore)),
+
           // sliceRatio 
           sliceratioMin: stats.min(state.goodHits.map(hit => hit.sliceRatio)),
           sliceratioMax: stats.max(state.goodHits.map(hit => hit.sliceRatio)),
@@ -885,7 +898,7 @@ AFRAME.registerState({
     },
     setHitsDebug: (state, payload) => {
       if (!state.enableHitsDebug) { return; }
-      state.hitsDebugString = "HitDataV8 " + JSON.stringify(payload, null, 2);
+      state.hitsDebugString = "HitDataV9 " + JSON.stringify(payload, null, 2);
       if (payload.good == true)
         state.goodHits.push(payload);
     }
