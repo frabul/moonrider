@@ -6,13 +6,13 @@ const DIST_FROM_CENTER_MAX = 0.5;
 const DIST_FROM_CENTER_MIN = 0.05;
 const minSliceRatio = 0.3;
 
+
 const State = {
     NotReaching: 0,
     Reaching: 1,
     InsideBox: 2,
     Hit: 3
-}
-import * as THREE from 'three';
+} 
 
 export class BladePositionData {
     constructor() {
@@ -35,11 +35,11 @@ export class BladeHitDetector {
             // easier to hit if is good
             this.bladeTipExtension = 0.5;
             this.bladeHandleExtension = 0.25;
-            this.bboxScaling = 1.3;
+            this.bboxScaling = 1.2;
         } else {
             this.bladeTipExtension = 0.1;
             this.bladeHandleExtension = 0.1;
-            this.bboxScaling = 1.05;
+            this.bboxScaling = 1.02;
         }
 
         this.bbox = new THREE.Box2(
@@ -104,7 +104,7 @@ export class BladeHitDetector {
         // if last swing is 'big' then let's syntetize more frames
         const lastSwingDistance = this.lastBladeData.tip.distanceTo(this.currentBladeData.tip);
         let artificialsCount = 0;
-        let artificialBladeDataCache = [];
+     
         if (this.lastBladeData.tip.distanceTo(this.currentBladeData.tip) > 0.5 * (this.bbox.max.x - this.bbox.min.x)) {
             artificialsCount = Math.floor(lastSwingDistance / (0.5 * (this.bbox.max.x - this.bbox.min.x)));
             artificialsCount = Math.min(artificialsCount, this.artificialBladeDataCache.length);
