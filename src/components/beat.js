@@ -191,7 +191,7 @@ AFRAME.registerComponent('beat', {
     this.bbox = mesh.geometry.boundingBox;
 
     if (this.data.type === 'mine') {
-      this.bbox.scale(0.5, 0.5, 0.5);
+        this.bbox.set(this.bbox.min.multiplyScalar(0.5), this.bbox.max.multiplyScalar(0.5));
     }
 
     // for debug add a-plane to this entity
