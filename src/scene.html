@@ -24,6 +24,7 @@
   debug-intro
   debug-song-time
   debug-state
+  bind-toggle__stats="enableStats"
   hack
   gpu-preloader
   {% if DEBUG_INSPECTOR %}
@@ -284,10 +285,8 @@
     <a-entity
       id="hitsDebug" 
       bind__text=" value: '' + hitsDebugString"
-      text="color: white;width: 3.5; align: left; anchor: left"
-    
-      position="-3 2 -3"
-      
+      text="color: white;width: 3.5; align: left; anchor: left" 
+      position="-4 2 -3" 
       rotation="-20 0 0"></a-entity>
       
   </a-entity>

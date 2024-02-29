@@ -1,6 +1,7 @@
 /* global localStorage */
 import COLORS from '../constants/colors';
 const utils = require('../utils');
+const stats = require('../arrayStats');
 const convertBeatmap = require('../lib/convert-beatmap');
 
 const challengeDataStore = {};
@@ -177,7 +178,10 @@ AFRAME.registerState({
     },
     searchResultsPage: [],
     speed: 10,
-    hitsDebugString: ''
+    enableHitsDebug: false,
+    enableStats: false,
+    hitsDebugString: '',
+    goodHits: [],
   },
 
   handlers: {
@@ -528,7 +532,7 @@ AFRAME.registerState({
 
         }
       }
-      
+
       state.menuDifficulties.sort(difficultyComparator);
 
       for (const d of state.menuDifficulties) {
@@ -638,6 +642,8 @@ AFRAME.registerState({
       state.loadingText = 'Loading...'
 
       gtag('event', 'colorscheme', { event_label: state.colorScheme });
+
+      state.goodHits.length = 0;
     },
 
     playlistclear: (state, playlist) => {
@@ -697,7 +703,7 @@ AFRAME.registerState({
             for (i = 0; i < hits.length; i++) {
               let result = hits[i];
               challengeDataStore[result.id] = result;
-            }            
+            }
           })
       }
     },
@@ -763,6 +769,34 @@ AFRAME.registerState({
       }
 
       computeBeatsText(state);
+      // add some debug info for hits
+      // it contains the min, max, mean, and std deviation for speed, accuracy, dotAngle and sliceRatio
+      if (state.enableHitsDebug) {
+        const hitsDebugData = {
+          // sliceRatio 
+          sliceratioMin: stats.min(state.goodHits.map(hit => hit.sliceRatio)),
+          sliceratioMax: stats.max(state.goodHits.map(hit => hit.sliceRatio)),
+          sliceratioMean: stats.mean(state.goodHits.map(hit => hit.sliceRatio)),
+          sliceratioStdDev: stats.standardDeviation(state.goodHits.map(hit => hit.sliceRatio)),
+          // distFromCenter
+          distfromcenterMin: stats.min(state.goodHits.map(hit => hit.distFromCenter)),
+          distfromcenterMax: stats.max(state.goodHits.map(hit => hit.distFromCenter)),
+          distfromcenterMean: stats.mean(state.goodHits.map(hit => hit.distFromCenter)),
+          distfromcenterStdDev: stats.standardDeviation(state.goodHits.map(hit => hit.distFromCenter)),
+          // slashSpeed
+          slashspeedMin: stats.min(state.goodHits.map(hit => hit.slashSpeed)),
+          slashspeedMax: stats.max(state.goodHits.map(hit => hit.slashSpeed)),
+          slashspeedMean: stats.mean(state.goodHits.map(hit => hit.slashSpeed)),
+          slashspeedStdDev: stats.standardDeviation(state.goodHits.map(hit => hit.slashSpeed)),
+          // angleDot 
+          angledotMin: stats.min(state.goodHits.map(hit => hit.angleDot)),
+          angledotMax: stats.max(state.goodHits.map(hit => hit.angleDot)),
+          angledotMean: stats.mean(state.goodHits.map(hit => hit.angleDot)),
+          angledotStdDev: stats.standardDeviation(state.goodHits.map(hit => hit.angleDot)),
+        };
+
+        state.hitsDebugString = "Hits Stats " + JSON.stringify(hitsDebugData, null, 2);
+      }
     },
 
     songloadcancel: state => {
@@ -802,7 +836,7 @@ AFRAME.registerState({
 
     'enter-vr': state => {
       state.inVR = AFRAME.utils.device.checkHeadsetConnected();
-      if (!AFRAME.utils.device.isMobile()) { 
+      if (!AFRAME.utils.device.isMobile()) {
         gtag('event', 'entervr', {});
         if (AFRAME.utils.device.isOculusBrowser()) {
           gtag('event', 'oculusbrowser', {});
@@ -846,10 +880,14 @@ AFRAME.registerState({
     debughits: state => {
       state.enableHitsDebug = true;
     },
-
+    debugstats: state => {
+      state.enableStats = true;
+    },
     setHitsDebug: (state, payload) => {
       if (!state.enableHitsDebug) { return; }
-      state.hitsDebugString = "HitDataV7 " + JSON.stringify(payload, null, 2);
+      state.hitsDebugString = "HitDataV8 " + JSON.stringify(payload, null, 2);
+      if (payload.good == true)
+        state.goodHits.push(payload);
     }
 
   },
