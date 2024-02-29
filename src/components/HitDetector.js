@@ -139,7 +139,7 @@ export class BladeHitDetector {
             if (!this.isGood) {
                 this.badHit("Bad target hit!");
                 this.setState(State.Hit);
-            } if (this.goodHitIfDot()) { // if it is a dot then we register a good hit in any case 
+            } else if (this.goodHitIfDot()) { // if it is a dot then we register a good hit in any case 
                 this.setState(State.Hit);
             } else {
                 // blade is entering the box 
