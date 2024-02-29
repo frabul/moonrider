@@ -61,7 +61,10 @@ export class BladeHitDetector {
         //this.bladeHandle = new THREE.Vector3();
         this.lastBladeData = null;
         this.currentBladeData = new BladePositionData();
-        this.artificialBladeData = new BladePositionData(); // blade data create by interpolating lastBladeData and currentBladeData
+        this.artificialBladeDataCache = []; // blade data create by interpolating lastBladeData and currentBladeData
+        for (let i = 0; i < 4; i++) {
+            this.artificialBladeDataCache.push(new BladePositionData());
+        }
         this.bladeVector = new THREE.Vector3();
         this.bboxcenter = new THREE.Vector3();
 
@@ -97,15 +100,30 @@ export class BladeHitDetector {
         this.currentBladeData.time = time;
         this.beat.el.object3D.worldToLocal(this.currentBladeData.tip);
         this.beat.el.object3D.worldToLocal(this.currentBladeData.handle);
-        // let's create an artificial frame  to increse precision
-        this.artificialBladeData.time = (this.currentBladeData.time + this.lastBladeData.time) / 2;
-        this.artificialBladeData.tip.lerpVectors(this.lastBladeData.tip, this.currentBladeData.tip, 0.5);
-        this.artificialBladeData.handle.lerpVectors(this.lastBladeData.handle, this.currentBladeData.handle, 0.5);
 
-        // process the artificial frame
-        this.processBladePosition(this.artificialBladeData);
-        if (!this.isHitDetected())
-            this.processBladePosition(this.currentBladeData);
+        // if last swing is 'big' then let's syntetize more frames
+        const lastSwingDistance = this.lastBladeData.tip.distanceTo(this.currentBladeData.tip);
+        let artificialsCount = 0;
+        let artificialBladeDataCache = [];
+        if (this.lastBladeData.tip.distanceTo(this.currentBladeData.tip) > 0.5 * (this.bbox.max.x - this.bbox.min.x)) {
+            artificialsCount = Math.floor(lastSwingDistance / (0.5 * (this.bbox.max.x - this.bbox.min.x)));
+            artificialsCount = Math.min(artificialsCount, this.artificialBladeDataCache.length);
+            for (let i = 0; i < artificialsCount; i++) {
+                // let's create an artificial frame  to increse precision
+                const artificialBladeData = this.artificialBladeDataCache[i];
+                const interpRatio = (i + 1) / (artificialsCount + 1);  // if they are 2 then we gate 1/3 and 2/3
+                artificialBladeData.time = (this.currentBladeData.time + this.lastBladeData.time) / interpRatio;
+                artificialBladeData.tip.lerpVectors(this.lastBladeData.tip, this.currentBladeData.tip, interpRatio);
+                artificialBladeData.handle.lerpVectors(this.lastBladeData.handle, this.currentBladeData.handle, interpRatio);
+            }
+        }
+
+        // process the artificial frames
+        for (let i = 0; i < artificialsCount; i++) {
+            this.processBladePosition(this.artificialBladeDataCache[i]);
+        } 
+        this.processBladePosition(this.currentBladeData);
+
         this.lastBladeData = this.currentBladeData;
         return this.isHitDetected();
     }
@@ -128,8 +146,7 @@ export class BladeHitDetector {
                 this.handleStateHit(bladeData);
                 break;
         }
-        this.lastTime = bladeData.time;
-
+        this.lastTime = bladeData.time; 
     }
 
     handleStateNotReaching(bladeData) {
