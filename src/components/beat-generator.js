@@ -4,7 +4,7 @@ let skipDebug = AFRAME.utils.getUrlParameter('skip') || 0;
 skipDebug = parseInt(skipDebug, 10);
 
 const DEBUG_MINES = AFRAME.utils.getUrlParameter('debugmines');
-
+const beatForwardTime = parseInt(AFRAME.utils.getUrlParameter('beatforwardtime'), 10);
 // Beats arrive at sword stroke distance synced with the music.
 export const BEAT_ANTICIPATION_TIME = 1.1;
 export const BEAT_PRELOAD_TIME = 1.1;
@@ -13,7 +13,10 @@ export const SWORD_OFFSET = 1.5;
 
 // How far out to load beats (ms).
 const isMobile = AFRAME.utils.device.isMobile();
-const BEAT_FORWARD_TIME = isMobile ? 2000 : 3500;
+
+var BEAT_FORWARD_TIME = isMobile ? 2000 : 3500;
+if (beatForwardTime && !isNaN(beatForwardTime))
+  BEAT_FORWARD_TIME = beatForwardTime;
 const WALL_FORWARD_TIME = isMobile ? 7500 : 10000;
 
 /**
@@ -109,20 +112,20 @@ AFRAME.registerComponent('beat-generator', {
       this.processBeats();
     });
 
-  /*
-    // For debugging: generate beats on key space press.
-    document.addEventListener('keydown', ev => {
-      if (ev.keyCode === 32) {
-        this.generateBeat({
-          _cutDirection: 1,
-          _lineIndex: (Math.random()*3)|0,
-          _lineLayer: 1,
-          _time: Math.floor(this.el.components.song.getCurrentTime() * 1.4 + 3),
-          _type: (Math.random() * 2) | 0
-        })
-      }
-    })
-  */
+    /*
+      // For debugging: generate beats on key space press.
+      document.addEventListener('keydown', ev => {
+        if (ev.keyCode === 32) {
+          this.generateBeat({
+            _cutDirection: 1,
+            _lineIndex: (Math.random()*3)|0,
+            _lineLayer: 1,
+            _time: Math.floor(this.el.components.song.getCurrentTime() * 1.4 + 3),
+            _type: (Math.random() * 2) | 0
+          })
+        }
+      })
+    */
   },
 
   play: function () {
@@ -156,7 +159,7 @@ AFRAME.registerComponent('beat-generator', {
   processBeats: function () {
     if (this.data.hasSongLoadError) { return; }
     // if there is version and first character is 3, convert to 2.xx
-    if (this.beatData.version  && this.beatData.version.charAt(0) === '3') {
+    if (this.beatData.version && this.beatData.version.charAt(0) === '3') {
       this.beatData = convertBeatData_320_to_2xx(this.beatData);
     }
     // Reset variables used during playback.
@@ -278,7 +281,8 @@ AFRAME.registerComponent('beat-generator', {
     // Entity was just created.
     if (!beatEl.components.beat && !beatEl.components.plume) {
       setTimeout(() => {
-        this.setupBeat(beatEl, noteInfo);});
+        this.setupBeat(beatEl, noteInfo);
+      });
     } else {
       this.setupBeat(beatEl, noteInfo);
     }
@@ -295,8 +299,8 @@ AFRAME.registerComponent('beat-generator', {
     // Factor in sword offset and beat anticipation time (percentage).
     const weaponOffset = this.data.gameMode === 'classic' ? SWORD_OFFSET : PUNCH_OFFSET;
     const positionOffset =
-    ((weaponOffset / data.speed) + BEAT_ANTICIPATION_TIME) /
-    data.songDuration;
+      ((weaponOffset / data.speed) + BEAT_ANTICIPATION_TIME) /
+      data.songDuration;
 
     // Song position is from 0 to 1 along the curve (percentage).
     const durationMs = data.songDuration * 1000;
@@ -327,7 +331,8 @@ AFRAME.registerComponent('beat-generator', {
     // Entity was just created.
     if (!wallEl.components.wall) {
       setTimeout(() => {
-        this.setupWall(wallEl, wallInfo);});
+        this.setupWall(wallEl, wallInfo);
+      });
     } else {
       this.setupWall(wallEl, wallInfo);
     }
