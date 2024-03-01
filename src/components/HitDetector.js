@@ -4,9 +4,9 @@ const sliceRatioTop = 1;
 const angleDotBottom = 0.75;
 const angleDotTop = 0.97;
 const distFromCenterBottom = 0.25;
-const distFromCenterTop = 0.09;
-const slashSpeedBottom = 8;
-const slashSpeedTop = 20;
+const distFromCenterTop = 0.095;
+const slashSpeedBottom = 5;
+const slashSpeedTop = 15;
 
 const ANGLE_DOT_MIN = 0.625; // ~50-degrees.
 
@@ -277,38 +277,39 @@ export class BladeHitDetector {
         const slashSpeed = direction.length() / (this.exitTime - this.entryTime) * 1000;
         const sliceRatio = direction.x / (this.beat.bbox.max.x - this.beat.bbox.min.x); // how much of the (original) box was sliced
 
+        // 100 points for successful hit
+        const baseScore = 100;
         // check slice ratio
-        // get 30 points for hitting the box, 100 for slicing it all
+        // 80 points for slice ratio
         if (sliceRatio < 0.2) {
             this.badHit("Bad slice ratio!");
             return;
         }
-        const sliceRatioScore = clampAndRemap(sliceRatio, sliceRatioBottom, sliceRatioTop, 30, 100);
+        const sliceRatioScore = clampAndRemap(sliceRatio, sliceRatioBottom, sliceRatioTop, 0, 80);
 
-        // 50 score on direction 
+        // 20 score on direction 
         direction.normalize();
         const angleDot = direction.dot(new THREE.Vector2(1, 0));
         if (angleDot < ANGLE_DOT_MIN) {
             this.badHit("Bad angle!");
             return;
         }
-        const angleScore = clampAndRemap(angleDot, angleDotBottom, angleDotTop, 5, 50);
-
+        const angleScore = clampAndRemap(angleDot, angleDotBottom, angleDotTop, 0, 20);
 
         // max 50 points for accuracy  
         const distFromCenter = distanceFromLine2D(this.bboxcenter, this.entryPoint, this.exitPoint) / boxHeight;
-        const accuracyScore = clampAndRemap(distFromCenter, distFromCenterTop, distFromCenterBottom, 50, 5);
+        const accuracyScore = clampAndRemap(distFromCenter, distFromCenterTop, distFromCenterBottom, 50, 0);
 
         // max 50 points for speed 
         const speedScore = clampAndRemap(slashSpeed, slashSpeedBottom, slashSpeedTop, 0, 50);
 
-        // total score
-        const totalScore = sliceRatioScore + speedScore + angleScore + accuracyScore;
+        // total score (max 300)
+        const totalScore = baseScore + sliceRatioScore + speedScore + angleScore + accuracyScore;
 
         this.hitData = {
             good: true,
             score: round_3dec(totalScore),
-            percent: round_3dec(totalScore / 250 * 100),
+            percent: round_3dec(totalScore / 300 * 100),
             sliceRatioScore: round_3dec(sliceRatioScore),
             accuracyScore: round_3dec(accuracyScore),
             speedScore: round_3dec(speedScore),
