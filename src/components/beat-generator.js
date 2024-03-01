@@ -150,6 +150,26 @@ AFRAME.registerComponent('beat-generator', {
       // Generate curve based on song duration.
       this.curveEl.components.supercurve.generateCurve(data.speed * data.songDuration);
       this.curve = this.curveEl.components.supercurve.curve;
+
+      // if skipDebug is set then we need to set index according to the time
+      this.setIndexAtTime(skipDebug);
+    }
+  },
+
+  setIndexAtTime: function (time) {
+    const msPerBeat = 1000 * 60 / this.beatData._beatsPerMinute;
+    const events = this.beatData._events;
+    const notes = this.beatData._notes;
+    const obstacles = this.beatData._obstacles;
+    time = time / msPerBeat; // convert time to beat time
+    for (let i = 0; events[i]._time < time; i++) {
+      this.index.events = i;
+    }
+    for (let i = 0; notes[i]._time < time; i++) {
+      this.index.notes = i;
+    }
+    for (let i = 0; obstacles[i]._time < time; i++) {
+      this.index.obstacles = i;
     }
   },
 

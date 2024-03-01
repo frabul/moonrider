@@ -11,6 +11,8 @@ const WIDTH = 3;
 const positionVec3 = new THREE.Vector3();
 const normalVec3 = new THREE.Vector3();
 
+let skipDebug = AFRAME.utils.getUrlParameter('skip') || 0;
+skipDebug = parseInt(skipDebug, 10);
 /**
  * For some reason, the front face is the bottom.
  */
@@ -288,7 +290,7 @@ AFRAME.registerComponent('supercurve-follow', {
       if (!curve) { return; }
 
       // Update progress based on speed.
-      this.curveProgress = this.curveProgress || 0;
+      this.curveProgress = this.curveProgress || ((skipDebug * data.speed / 1000) / this.supercurve.fullLength); // if curveProgress is 0, set it according to skipDebug 
       const distanceTraveled = data.speed * (dt / 1000);
       this.curveProgress += distanceTraveled / this.supercurve.fullLength;
 
