@@ -82,7 +82,8 @@ AFRAME.registerComponent('stage-colors', {
       set(materials.stars, 'color', color);
       return;
     }
-
+    
+    code = Math.min(colorCodes.length - 1, Math.max(0, code));
     const color = COLORS.schemes[this.data.colorScheme][colorCodes[code]];
     if (target === 'moon') {
       set(materials.moon, 'tint', color);
