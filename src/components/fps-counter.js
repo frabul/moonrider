@@ -10,7 +10,7 @@ AFRAME.registerComponent('fps-counter', {
         this.fps = 90;
         this.decay = 1 / this.data.interval;
         this.lastTimeSet = 0;
-        this.updatePeriod = 700;
+        this.updatePeriod = 250;
         this.data.enabled = AFRAME.utils.getUrlParameter('fps') !== ''  ;
     },
 
