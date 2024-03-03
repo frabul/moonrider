@@ -589,6 +589,10 @@ AFRAME.registerState({
       state.menuSelectedChallenge.beatmapCharacteristic = difficulty.beatmapCharacteristic;
       updateMenuSongInfo(state, state.menuSelectedChallenge);
 
+      const challenge = state.menuSelectedChallenge;
+      let info = JSON.parse(challenge.metadata.characteristics)[state.menuSelectedChallenge.beatmapCharacteristic][state.menuSelectedChallenge.difficulty];
+      state.speed = info.njs;
+      
       clearLeaderboard(state);
       state.leaderboardLoading = true;
     },
