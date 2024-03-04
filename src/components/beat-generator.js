@@ -33,6 +33,7 @@ AFRAME.registerComponent('beat-generator', {
     has3DOFVR: { default: false },
     hasSongLoadError: { default: false },
     isPlaying: { default: false },
+    isLoading: { default: false },
     isZipFetching: { default: false },
     menuSelectedChallengeId: { type: 'string' },
     songDuration: { type: 'number' }, // Seconds.
@@ -111,7 +112,7 @@ AFRAME.registerComponent('beat-generator', {
       this.beatData = this.beats[this.data.beatmapCharacteristic + '-' + this.data.difficulty];
       this.processBeats();
     });
-
+    this.wallsCache = [];
     /*
       // For debugging: generate beats on key space press.
       document.addEventListener('keydown', ev => {
@@ -136,7 +137,7 @@ AFRAME.registerComponent('beat-generator', {
     const data = this.data;
 
     // Song selected and clicked play.
-    if (oldData.challengeId !== data.challengeId && data.challengeId) {
+    if (!oldData.isLoading && data.isLoading && data.challengeId) {
       this.index.events = 0;
       this.index.notes = 0;
       this.index.obstacles = 0;
@@ -147,12 +148,11 @@ AFRAME.registerComponent('beat-generator', {
         this.processBeats();
       }
 
-      // Generate curve based on song duration.
-      this.curveEl.components.supercurve.generateCurve(data.speed * data.songDuration);
-      this.curve = this.curveEl.components.supercurve.curve;
-
       // if skipDebug is set then we need to set index according to the time
       this.setIndexAtTime(skipDebug);
+
+
+      this.onRestart();
     }
   },
 
@@ -235,6 +235,8 @@ AFRAME.registerComponent('beat-generator', {
       if (songTime + BEAT_FORWARD_TIME > notes[i]._time * msPerBeat) {
         this.generateBeat(notes[i]);
         this.index.notes++;
+      } else {
+        break; // notes are sorted by time, so we can break early
       }
     }
 
@@ -242,9 +244,12 @@ AFRAME.registerComponent('beat-generator', {
       // Walls.
       const obstacles = this.beatData._obstacles;
       for (let i = this.index.obstacles; i < obstacles.length; ++i) {
-        if (songTime + WALL_FORWARD_TIME >= obstacles[i]._time * msPerBeat) {
-          this.generateWall(obstacles[i]);
+        if (songTime + WALL_FORWARD_TIME > obstacles[i]._time * msPerBeat) {
+          const wallEl = this.wallsCache[i];
+          wallEl.visible = true;
           this.index.obstacles++;
+        } else {
+          break; // obstacles are sorted by time, so we can break early
         }
       }
     }
@@ -255,6 +260,8 @@ AFRAME.registerComponent('beat-generator', {
       if (songTime >= events[i]._time * msPerBeat) {
         this.generateEvent(events[i]);
         this.index.events++;
+      } else {
+        break; // events are sorted by time, so we can break early
       }
     }
 
@@ -356,6 +363,7 @@ AFRAME.registerComponent('beat-generator', {
     } else {
       this.setupWall(wallEl, wallInfo);
     }
+    return wallEl;
   },
 
   setupWall: function (wallEl, wallInfo) {
@@ -381,6 +389,7 @@ AFRAME.registerComponent('beat-generator', {
     wallEl.components.wall.onGenerate(songPosition, horizontalPosition, width, length,
       isCeiling, songPosition + lengthPercent);
     wallEl.play();
+    //wallEl.visible = false;
 
     // Set render order (back to front so decreasing render order as index increases).
     // For walls, set as the back end of the wall.
@@ -462,8 +471,20 @@ AFRAME.registerComponent('beat-generator', {
    */
   onRestart: function () {
     const data = this.data;
+    // Generate curve based on song duration.
     this.curveEl.components.supercurve.generateCurve(data.speed * data.songDuration);
     this.curve = this.curveEl.components.supercurve.curve;
+
+    // generate walls and store them in a cache
+    setTimeout(() => {
+      this.wallsCache = [];
+      const obstacles = this.beatData._obstacles;
+      for (let i = this.index.obstacles; i < obstacles.length; ++i) {
+        const wall = this.generateWall(obstacles[i]);
+        this.wallsCache.push(wall);
+      }
+    });
+
   }
 });
 

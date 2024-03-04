@@ -37,7 +37,9 @@ AFRAME.registerComponent('wall', {
       }
     }
 
-    if (songProgress >= this.backPosition + 0.01) { this.returnToPool(); }
+    if (songProgress >= this.backPosition + 0.01) {
+      this.returnToPool(); 
+    }
   },
 
   onGenerate: function (songPosition, horizontalPosition, width, length, isCeiling, backPosition) {
@@ -115,6 +117,9 @@ AFRAME.registerComponent('wall', {
     if (this.el.isPlaying) {
       this.el.sceneEl.components.pool__wall.returnEntity(this.el);
     }
-    if (this.geometry) { this.geometry.dispose(); }
+    if (this.geometry) {
+      this.geometry.dispose();
+      this.geometry = null;
+    }
   }
 });
