@@ -115,9 +115,9 @@ AFRAME.registerComponent('beat-generator', {
     this.wallsCache = {};
     // init eventAllowedTime and eventCooldown  
     this.eventAllowedTime = new Array(50).fill(0);
-    this.eventCooldown = new Array(50).fill(200);
-    this.eventCooldown[8] = 800;
-    this.eventCooldown[9] = 800;
+    this.eventCooldown = new Array(50).fill(100);
+    this.eventCooldown[8] = 500;
+    this.eventCooldown[9] = 500;
 
     /*
       // For debugging: generate beats on key space press.
@@ -260,7 +260,7 @@ AFRAME.registerComponent('beat-generator', {
     const events = this.beatData._events;
     for (let i = this.index.events; i < events.length; ++i) {
       if (songTime >= events[i]._time * msPerBeat) {
-        this.generateEvent(events[i]);
+        this.generateEvent(time, events[i]);
         this.index.events++;
       }
     }
@@ -396,7 +396,7 @@ AFRAME.registerComponent('beat-generator', {
   },
 
   generateEvent: function (time, event) {
-    if (this.eventCooldown(time, event)) {
+    if (this.eventIsInCooldown(time, event)) {
       return;
     }
     this.eventExecuted(time, event);
@@ -478,13 +478,12 @@ AFRAME.registerComponent('beat-generator', {
     this.curve = this.curveEl.components.supercurve.curve;
     console.log("onRestart called");
   },
-
-  eventCooldown: function (time, event) {
+  eventIsInCooldown: function (time, event) {
     if (this.eventAllowedTime.length < event._type) {
       console.error('eventAllowedTime.length < event._type');
       return false;
     }
-    return time >= this.eventAllowedTime[event._type];
+    return time < this.eventAllowedTime[event._type];
   },
 
   eventExecuted: function (time, event) {
