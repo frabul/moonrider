@@ -112,7 +112,7 @@ AFRAME.registerComponent('beat-generator', {
       this.beatData = this.beats[this.data.beatmapCharacteristic + '-' + this.data.difficulty];
       this.processBeats();
     });
-    this.wallsCache = [];
+    this.wallsCache = {};
     /*
       // For debugging: generate beats on key space press.
       document.addEventListener('keydown', ev => {
@@ -246,7 +246,7 @@ AFRAME.registerComponent('beat-generator', {
       for (let i = this.index.obstacles; i < obstacles.length; ++i) {
         if (songTime + WALL_FORWARD_TIME > obstacles[i]._time * msPerBeat) {
           const wallEl = this.wallsCache[i];
-          wallEl.visible = true;
+          wallEl.play();
           this.index.obstacles++;
         } else {
           break; // obstacles are sorted by time, so we can break early
@@ -388,8 +388,6 @@ AFRAME.registerComponent('beat-generator', {
     const lengthPercent = length / this.curveEl.components.supercurve.length;
     wallEl.components.wall.onGenerate(songPosition, horizontalPosition, width, length,
       isCeiling, songPosition + lengthPercent);
-    wallEl.play();
-    //wallEl.visible = false;
 
     // Set render order (back to front so decreasing render order as index increases).
     // For walls, set as the back end of the wall.
@@ -476,12 +474,12 @@ AFRAME.registerComponent('beat-generator', {
     this.curve = this.curveEl.components.supercurve.curve;
 
     // generate walls and store them in a cache
+    this.wallsCache = {};
     setTimeout(() => {
-      this.wallsCache = [];
       const obstacles = this.beatData._obstacles;
       for (let i = this.index.obstacles; i < obstacles.length; ++i) {
         const wall = this.generateWall(obstacles[i]);
-        this.wallsCache.push(wall);
+        this.wallsCache[i] = wall;
       }
     });
 
