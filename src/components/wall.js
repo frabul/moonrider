@@ -22,6 +22,7 @@ AFRAME.registerComponent('wall', {
   },
 
   play: function () {
+    console.log('walle played, name ' + this.el.wallName);
     this.el.object3D.visible = true;
   },
 
@@ -50,8 +51,7 @@ AFRAME.registerComponent('wall', {
     this.setWallGeometry(songPosition, horizontalPosition, width, length, isCeiling);
     el.getObject3D('mesh').material.uniforms.opacity.value = 0;
     el.object3D.position.y = -5;
-    el.components.animation__fadein.beginAnimation();
-    el.components.animation__scalein.beginAnimation();
+    
   },
 
   /**
@@ -108,18 +108,21 @@ AFRAME.registerComponent('wall', {
   })(),
 
   returnToPool: function () {
-    this.el.object3D.visible = false;
+    console.log('returning wall to pool, name ' + this.el.wallName);
+    
     this.el.removeAttribute('data-weapon-particles');
     this.el.removeAttribute('data-wall-active');
     this.el.removeAttribute('raycastable-game');
     this.isCeiling = false;
     this.isRaycastable = false;
-    if (this.el.isPlaying) {
-      this.el.sceneEl.components.pool__wall.returnEntity(this.el);
-    }
+    
+    this.el.sceneEl.components.pool__wall.returnEntity(this.el);
+ 
     if (this.geometry) {
       this.geometry.dispose();
       this.geometry = null;
     }
+    this.el.object3D.visible = false;
+    this.el.pause();
   }
 });

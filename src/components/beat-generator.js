@@ -17,7 +17,7 @@ const isMobile = AFRAME.utils.device.isMobile();
 var BEAT_FORWARD_TIME = isMobile ? 2000 : 3500;
 if (beatForwardTime && !isNaN(beatForwardTime))
   BEAT_FORWARD_TIME = beatForwardTime;
-const WALL_FORWARD_TIME = isMobile ? 7500 : 10000;
+const WALL_FORWARD_TIME = isMobile ? 3000 : 3000;
 
 /**
  * Load beat data (all the beats and such).
@@ -118,7 +118,7 @@ AFRAME.registerComponent('beat-generator', {
     this.eventCooldown = new Array(50).fill(100);
     this.eventCooldown[8] = 500;
     this.eventCooldown[9] = 500;
-
+  
     /*
       // For debugging: generate beats on key space press.
       document.addEventListener('keydown', ev => {
@@ -252,7 +252,10 @@ AFRAME.registerComponent('beat-generator', {
       for (let i = this.index.obstacles; i < obstacles.length; ++i) {
         if (songTime + WALL_FORWARD_TIME > obstacles[i]._time * msPerBeat) {
           const wallEl = this.wallsCache[i];
+          console.log('playing wall ' + wallEl.wallName);
           wallEl.play();
+          wallEl.components.animation__fadein.beginAnimation();
+          wallEl.components.animation__scalein.beginAnimation();
           this.index.obstacles++;
         } else {
           break; // obstacles are sorted by time, so we can break early
@@ -490,6 +493,7 @@ AFRAME.registerComponent('beat-generator', {
       const obstacles = this.beatData._obstacles;
       for (let i = this.index.obstacles; i < obstacles.length; ++i) {
         const wall = this.generateWall(obstacles[i]);
+        wall.wallName = "wall_" + i;
         this.wallsCache[i] = wall;
       }
     });
