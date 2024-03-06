@@ -14,10 +14,10 @@ export const SWORD_OFFSET = 1.5;
 // How far out to load beats (ms).
 const isMobile = AFRAME.utils.device.isMobile();
 
-var BEAT_FORWARD_TIME = isMobile ? 2000 : 3500;
+var BEAT_FORWARD_TIME = isMobile ? 1700 : 3500;
 if (beatForwardTime && !isNaN(beatForwardTime))
   BEAT_FORWARD_TIME = beatForwardTime;
-const WALL_FORWARD_TIME = isMobile ? 7500 : 10000;
+const WALL_FORWARD_TIME = isMobile ? 6000 : 9000;
 
 /**
  * Load beat data (all the beats and such).
@@ -252,7 +252,7 @@ AFRAME.registerComponent('beat-generator', {
       for (let i = this.index.obstacles; i < obstacles.length; ++i) {
         if (songTime + WALL_FORWARD_TIME > obstacles[i]._time * msPerBeat) {
           const wallEl = this.wallsCache[i];
-          wallEl.play();
+          wallEl.components.wall.enterTheScene();
           this.index.obstacles++;
         } else {
           break; // obstacles are sorted by time, so we can break early
@@ -355,12 +355,12 @@ AFRAME.registerComponent('beat-generator', {
     beatEl.play();
   },
 
-  generateWall: function (wallInfo) {
+  generateWall: function (wallInfo, name) {
     const data = this.data;
     const wallEl = this.el.sceneEl.components.pool__wall.requestEntity();
-
     if (!wallEl) { return; }
-
+    
+    wallEl.wallName = name;
     // Entity was just created.
     if (!wallEl.components.wall) {
       setTimeout(() => {
@@ -461,17 +461,20 @@ AFRAME.registerComponent('beat-generator', {
     this.index.events = 0;
     this.index.notes = 0;
     this.index.obstacles = 0;
-
+    console.log("Clearing game");
     for (let i = 0; i < this.beatContainer.children.length; i++) {
       const child = this.beatContainer.children[i];
       child.object3D.position.set(0, 0, -9999);
       if (child.components.beat) { child.components.beat.returnToPool(); }
     }
 
-    for (let i = 0; i < this.wallContainer.children.length; i++) {
-      const child = this.wallContainer.children[i];
-      child.object3D.position.set(0, -9999, 0);
-      if (child.components.wall) { child.components.wall.returnToPool(); }
+    // iterate all walls in wallsCache and retrun them to pool
+    const keys = Object.keys(this.wallsCache);
+    for (let i = 0; i < keys.length; i++) {
+      const wallEl = this.wallsCache[keys[i]];
+      wallEl.object3D.position.set(0, -9999, 0);
+      if (wallEl.components.wall)
+        wallEl.components.wall.returnToPool();
     }
   },
 
@@ -489,7 +492,7 @@ AFRAME.registerComponent('beat-generator', {
     setTimeout(() => {
       const obstacles = this.beatData._obstacles;
       for (let i = this.index.obstacles; i < obstacles.length; ++i) {
-        const wall = this.generateWall(obstacles[i]);
+        const wall = this.generateWall(obstacles[i], "wall_" + i);
         this.wallsCache[i] = wall;
       }
     });

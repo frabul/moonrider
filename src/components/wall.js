@@ -13,7 +13,8 @@ AFRAME.registerComponent('wall', {
     this.curveEl = document.getElementById('curve');
     this.curveFollowRig = document.getElementById('curveFollowRig');
     this.el.setObject3D('mesh', new THREE.Mesh());
-    this.geometry = null;
+    this.geometry = new THREE.BoxBufferGeometry(1, 1, 1, 1, 1, 30);
+    this.el.getObject3D('mesh').geometry = this.geometry;
     this.isCeiling = false;
     this.isRaycastable = false;
     this.localPosition = new THREE.Vector3();
@@ -22,7 +23,15 @@ AFRAME.registerComponent('wall', {
   },
 
   play: function () {
+    console.log('wall played, name ' + this.el.wallName);
     this.el.object3D.visible = true;
+  },
+
+  enterTheScene: function () {
+    console.log('wall entering scene: ' + this.el);
+    this.el.play();
+    this.el.components.animation__fadein.beginAnimation();
+    this.el.components.animation__scalein.beginAnimation();
   },
 
   tick: function (time, timeDelta) {
@@ -38,11 +47,12 @@ AFRAME.registerComponent('wall', {
     }
 
     if (songProgress >= this.backPosition + 0.01) {
-      this.returnToPool(); 
+      this.returnToPool();
     }
   },
 
   onGenerate: function (songPosition, horizontalPosition, width, length, isCeiling, backPosition) {
+    console.log('wall onGenerate, name ' + this.el.wallName);
     const el = this.el;
     this.isCeiling = isCeiling;
     this.backPosition = backPosition;
@@ -50,8 +60,7 @@ AFRAME.registerComponent('wall', {
     this.setWallGeometry(songPosition, horizontalPosition, width, length, isCeiling);
     el.getObject3D('mesh').material.uniforms.opacity.value = 0;
     el.object3D.position.y = -5;
-    el.components.animation__fadein.beginAnimation();
-    el.components.animation__scalein.beginAnimation();
+
   },
 
   /**
@@ -80,21 +89,22 @@ AFRAME.registerComponent('wall', {
         (width / 2) + 0.25;
       left.x = centerPosition - (width / 2);
       right.x = centerPosition + (width / 2);
-
-      // TODO: Reuse box.
-      const geo = this.geometry = new THREE.BoxBufferGeometry(width, height, 1, 1, 1, 30);
+      
+      // Reuse box. 
+      const geo = this.geometry;
       const positions = geo.attributes.position.array;
       for (let i = 0; i < positions.length; i += 3) {
         // Add half length (which will always be 1 / 2) for the box geometry offset.
         // Converts box Z from [-0.5, 0.5] to [0, 1] providing a percent.
         const vertexPercent = positions[i + 2] + 0.5;
+
         supercurve.getPositionRelativeToTangent(
           startPercent + (vertexPercent * (endPercent - startPercent)),
           positions[i] < 0 ? left : right,
           modifiedVertexPos);
 
         positions[i] = modifiedVertexPos.x;
-        positions[i + 1] += modifiedVertexPos.y + height / 2;
+        positions[i + 1] = (positions[i + 1] * height) + modifiedVertexPos.y + height / 2;
         positions[i + 2] = modifiedVertexPos.z;
       }
 
@@ -102,24 +112,21 @@ AFRAME.registerComponent('wall', {
       let ceilingHeight = beatSystem.verticalPositions.middle + beatSystem.size / 2;
       if (beatSystem.data.gameMode === 'punch') { ceilingHeight -= 0.1; }
 
-      this.el.getObject3D('mesh').geometry = this.geometry;
+
       this.el.getObject3D('mesh').position.y = isCeiling ? ceilingHeight : 0.1;
     };
   })(),
 
   returnToPool: function () {
-    this.el.object3D.visible = false;
+    console.log('returning wall to pool, name ' + this.el.wallName);
+
     this.el.removeAttribute('data-weapon-particles');
     this.el.removeAttribute('data-wall-active');
     this.el.removeAttribute('raycastable-game');
     this.isCeiling = false;
     this.isRaycastable = false;
-    if (this.el.isPlaying) {
-      this.el.sceneEl.components.pool__wall.returnEntity(this.el);
-    }
-    if (this.geometry) {
-      this.geometry.dispose();
-      this.geometry = null;
-    }
+    this.el.sceneEl.components.pool__wall.returnEntity(this.el);
+    this.el.object3D.visible = false;
+    this.el.pause();
   }
 });
