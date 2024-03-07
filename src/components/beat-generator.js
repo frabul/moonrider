@@ -118,7 +118,7 @@ AFRAME.registerComponent('beat-generator', {
     this.eventCooldown = new Array(50).fill(100);
     this.eventCooldown[8] = 500;
     this.eventCooldown[9] = 500;
-
+    this.restartCompleted = false;
     /*
       // For debugging: generate beats on key space press.
       document.addEventListener('keydown', ev => {
@@ -159,6 +159,7 @@ AFRAME.registerComponent('beat-generator', {
 
 
       this.onRestart();
+
     }
   },
 
@@ -218,7 +219,7 @@ AFRAME.registerComponent('beat-generator', {
    * Generate beats and stuff according to timestamp.
    */
   tick: function (time, delta) {
-    if (!this.data.isPlaying || !this.data.challengeId || !this.beatData) { return; }
+    if (!this.data.isPlaying || !this.data.challengeId || !this.beatData || !this.restartCompleted) { return; }
 
     let songTime;
     const song = this.el.components.song;
@@ -359,7 +360,7 @@ AFRAME.registerComponent('beat-generator', {
     const data = this.data;
     const wallEl = this.el.sceneEl.components.pool__wall.requestEntity();
     if (!wallEl) { return; }
-    
+
     wallEl.wallName = name;
     // Entity was just created.
     if (!wallEl.components.wall) {
@@ -457,11 +458,12 @@ AFRAME.registerComponent('beat-generator', {
    * Restart by returning all beats to pool.
    */
   onClearGame: function () {
+    console.log("Clearing game");
+    this.restartCompleted = false;
     this.preloadTime = 0;
     this.index.events = 0;
     this.index.notes = 0;
     this.index.obstacles = 0;
-    console.log("Clearing game");
     for (let i = 0; i < this.beatContainer.children.length; i++) {
       const child = this.beatContainer.children[i];
       child.object3D.position.set(0, 0, -9999);
@@ -482,6 +484,9 @@ AFRAME.registerComponent('beat-generator', {
    * Regenerate.
    */
   onRestart: function () {
+    this.onClearGame();
+    console.log("Restarting game");
+    this.restartCompleted = false;
     const data = this.data;
     // Generate curve based on song duration.
     this.curveEl.components.supercurve.generateCurve(data.speed * data.songDuration);
@@ -491,12 +496,20 @@ AFRAME.registerComponent('beat-generator', {
     this.wallsCache = {};
     setTimeout(() => {
       const obstacles = this.beatData._obstacles;
+      for (let i = 0; i < obstacles.length; ++i) {
+        let wallInfo = obstacles[i];
+        wallInfo._duration = 2.5;
+        wallInfo._lineIndex = (i % 2) * 3;
+        wallInfo._time = Math.floor(i / 2) * 3;
+        wallInfo._type = 0;
+        wallInfo._width = 1;
+      }
       for (let i = this.index.obstacles; i < obstacles.length; ++i) {
         const wall = this.generateWall(obstacles[i], "wall_" + i);
         this.wallsCache[i] = wall;
       }
+      this.restartCompleted = true;
     });
-
   },
   eventIsInCooldown: function (time, event) {
     if (this.eventAllowedTime.length < event._type) {
