@@ -3,6 +3,17 @@ import { SIZES } from './beat';
 const HEIGHT = 2.5;
 const CEILING_THICKNESS = 1.5;
 
+
+class z_range {
+  constructor(min, max) {
+    this.min = min;
+    this.max = max;
+  }
+  length() {
+    return this.max - this.min;
+  }
+    
+}
 /**
  * Wall to dodge.
  */
@@ -14,12 +25,15 @@ AFRAME.registerComponent('wall', {
     this.curveFollowRig = document.getElementById('curveFollowRig');
     this.el.setObject3D('mesh', new THREE.Mesh());
     this.geometry = new THREE.BoxBufferGeometry(1, 1, 1, 1, 1, 30);
+    
     this.el.getObject3D('mesh').geometry = this.geometry;
     this.isCeiling = false;
     this.isRaycastable = false;
     this.localPosition = new THREE.Vector3();
     this.songPosition = undefined;
     this.tick = AFRAME.utils.throttleTick(this.tick.bind(this), 1000);
+    this.zrange =  new z_range(-0.5, 0.5);
+
   },
 
   play: function () {
@@ -89,15 +103,15 @@ AFRAME.registerComponent('wall', {
         (width / 2) + 0.25;
       left.x = centerPosition - (width / 2);
       right.x = centerPosition + (width / 2);
-      
+   
       // Reuse box. 
       const geo = this.geometry;
       const positions = geo.attributes.position.array;
+      const oldRange = new z_range(this.zrange.min, this.zrange.max);
       for (let i = 0; i < positions.length; i += 3) {
         // Add half length (which will always be 1 / 2) for the box geometry offset.
         // Converts box Z from [-0.5, 0.5] to [0, 1] providing a percent.
-        const vertexPercent = positions[i + 2] + 0.5;
-
+        const vertexPercent = (positions[i + 2] - oldRange.min) / (oldRange.length());
         supercurve.getPositionRelativeToTangent(
           startPercent + (vertexPercent * (endPercent - startPercent)),
           positions[i] < 0 ? left : right,
@@ -106,6 +120,8 @@ AFRAME.registerComponent('wall', {
         positions[i] = modifiedVertexPos.x;
         positions[i + 1] = (positions[i + 1] * height) + modifiedVertexPos.y + height / 2;
         positions[i + 2] = modifiedVertexPos.z;
+        this.zrange.min = Math.min(this.zrange.min, positions[i + 2]);
+        this.zrange.max = Math.max(this.zrange.max, positions[i + 2]);
       }
 
       // Notes are higher in punch so lower a tad.
