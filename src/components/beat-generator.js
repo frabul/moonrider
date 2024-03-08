@@ -171,17 +171,17 @@ AFRAME.registerComponent('beat-generator', {
         this.generateEvent(events[i]);
       }
     }
-    const obstacles = this.beatData._obstacles;
-    for (let i = 0; i < obstacles.length; ++i) {
-      let wallInfo = obstacles[i];
-      wallInfo._duration = 2.5;
-      wallInfo._lineIndex = (i % 2) * 3;
-      wallInfo._time = Math.floor(i / 2) * 3;
-      wallInfo._type = 0;
-      wallInfo._width = 1;
-    }
-
-
+    // code to debug obstacles performance
+    //const obstacles = this.beatData._obstacles;
+    //for (let i = 0; i < obstacles.length; ++i) {
+    //  let wallInfo = obstacles[i];
+    //  wallInfo._duration = 2.5;
+    //  wallInfo._lineIndex = (i % 2) * 3;
+    //  wallInfo._time = Math.floor(i / 2) * 3;
+    //  wallInfo._type = 0;
+    //  wallInfo._width = 1;
+    //}
+    
     this.beatDataProcessed = true;
     console.log('[beat-generator] Finished processing beat data.');
   },
@@ -211,7 +211,7 @@ AFRAME.registerComponent('beat-generator', {
     const notes = this.beatData._notes;
     for (let i = this.index.notes; i < notes.length; ++i) {
       if (songTime + BEAT_FORWARD_TIME > notes[i]._time * msPerBeat) {
-        //this.generateBeat(notes[i]);
+        this.generateBeat(notes[i]);
         this.index.notes++;
       } else {
         break; // notes are sorted by time, so we can break early
