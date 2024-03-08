@@ -169,13 +169,13 @@ AFRAME.registerComponent('beat-generator', {
     const notes = this.beatData._notes;
     const obstacles = this.beatData._obstacles;
     time = time / msPerBeat; // convert time to beat time
-    for (let i = 0; events[i]._time < time; i++) {
+    for (let i = 0; i < events.length && events[i]._time < time; i++) {
       this.index.events = i;
     }
-    for (let i = 0; notes[i]._time < time; i++) {
+    for (let i = 0; i < notes.length && notes[i]._time < time; i++) {
       this.index.notes = i;
     }
-    for (let i = 0; obstacles[i]._time < time; i++) {
+    for (let i = 0; i < obstacles.length && obstacles[i]._time < time; i++) {
       this.index.obstacles = i;
     }
   },
