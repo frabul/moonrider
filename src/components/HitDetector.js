@@ -306,10 +306,11 @@ export class BladeHitDetector {
         // total score (max 300)
         const totalScore = baseScore + sliceRatioScore + speedScore + angleScore + accuracyScore;
 
+        const cappedScore = Math.min(totalScore, 250); // max 250 points for a hit
         this.hitData = {
             good: true,
-            score: round_3dec(totalScore),
-            percent: round_3dec(totalScore / 300 * 100),
+            score: round_3dec(cappedScore),
+            percent: round_3dec(cappedScore / 250 * 100),
             sliceRatioScore: round_3dec(sliceRatioScore),
             accuracyScore: round_3dec(accuracyScore),
             speedScore: round_3dec(speedScore),
