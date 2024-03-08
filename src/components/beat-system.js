@@ -42,6 +42,11 @@ AFRAME.registerComponent('beat-system', {
         this.size = SIZES[this.data.gameMode];
         this.supercurveFollow = null;
         this.beatEventsQueue = [];
+        this.el.sceneEl.addEventListener('loadMap', () => {
+            this.updateBeatPositioning();
+            this.weaponOffset = this.data.gameMode === CLASSIC ? SWORD_OFFSET : PUNCH_OFFSET;
+            this.weaponOffset = this.weaponOffset * 1.5 / this.supercurve.curve.getLength();
+        });
     },
 
     play: function () {
@@ -57,11 +62,7 @@ AFRAME.registerComponent('beat-system', {
     update: function (oldData) {
         this.size = SIZES[this.data.gameMode];
 
-        if (!oldData.isLoading && this.data.isLoading) {
-            this.updateBeatPositioning();
-            this.weaponOffset = this.data.gameMode === CLASSIC ? SWORD_OFFSET : PUNCH_OFFSET;
-            this.weaponOffset = this.weaponOffset * 1.5 / this.supercurve.curve.getLength();
-        }
+    
 
         if (oldData.gameMode !== this.data.gameMode) {
             this.weapons = this.data.gameMode === CLASSIC ? this.blades : this.fists;
