@@ -52,8 +52,8 @@ AFRAME.registerComponent('song', {
     this.el.addEventListener('wallhitend', this.onWallHitEnd.bind(this));
 
     this.el.sceneEl.addEventListener('loadSong', this.loadSong.bind(this));
-    this.el.sceneEl.addEventListener('gamemenurestart', this.restartSong.bind(this));
-    this.el.sceneEl.addEventListener('startSong', this.restartSong.bind(this));
+    this.el.sceneEl.addEventListener('gamemenurestart', this.startSong.bind(this));
+    this.el.sceneEl.addEventListener('startSong', this.startSong.bind(this));
 
     if (process.env.NODE_ENV !== 'production') {
       this.el.addEventListener('victoryfake', () => {
