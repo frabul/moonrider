@@ -51,8 +51,13 @@ AFRAME.registerComponent('song', {
     this.el.addEventListener('wallhitstart', this.onWallHitStart.bind(this));
     this.el.addEventListener('wallhitend', this.onWallHitEnd.bind(this));
 
-    this.el.sceneEl.addEventListener('loadSong', this.loadSong.bind(this));
-    this.el.sceneEl.addEventListener('gamemenurestart', this.startSong.bind(this));
+    this.el.sceneEl.addEventListener('loadSong', () => {
+      this.el.sceneEl.emit('songprocessstart', null, false);
+      setTimeout(() => {
+        this.el.sceneEl.emit('songprocessfinish', null, false);
+      }, 50);
+    });
+    //this.el.sceneEl.addEventListener('gamemenurestart', this.startSong.bind(this));
     this.el.sceneEl.addEventListener('startSong', this.startSong.bind(this));
 
     if (process.env.NODE_ENV !== 'production') {
@@ -164,7 +169,7 @@ AFRAME.registerComponent('song', {
     const data = this.data;
 
     if (this.source) { this.stopAudio(); }
-    console.log("Loading song " + data.audio);
+    console.log("Getting audio buffer " + data.audio);
     this.isAudioPlaying = false;
     return new Promise(resolve => {
       data.analyserEl.addEventListener('audioanalyserbuffersource', evt => {
@@ -172,42 +177,49 @@ AFRAME.registerComponent('song', {
         this.source = evt.detail;
         resolve(this.source);
       }, ONCE);
-      this.analyserSetter.src = this.data.audio;
-      data.analyserEl.setAttribute('audioanalyser', this.analyserSetter);
-    });
-  },
+      if (this.loadedAudio == this.data.audio) {
+        this.audioAnalyser.refreshSource();
+      } else { 
+        this.analyserSetter.src = this.data.audio;
+        data.analyserEl.setAttribute('audioanalyser', this.analyserSetter);
+      }
 
-  loadSong: function () {
-    this.el.sceneEl.emit('songprocessstart', null, false);
-    this.getAudio().then(source => {
-      this.loadedAudio = this.data.audio;
-      console.log("Song loaded " + this.loadedAudio);
-      this.el.sceneEl.emit('songprocessfinish', null, false);
     }).catch(console.error);
   },
 
-  // starts ( or restarts ) the song
-  startSong: function () { //startAudio onRestart
-    if (this.source) {
-      this.stopAudio();
-    }
-    // Restart, get new buffer source node and play.
-    console.log('Restarting song ' + this.loadedAudio);
+  loadSong: function (onComplete = null) {
+    console.log("Loading song " + this.data.audio);
+    this.getAudio().then(source => {
+      this.loadedAudio = this.data.audio;
+      console.log("Song loaded " + this.loadedAudio);
+      if (onComplete)
+        onComplete();
+    }).catch(console.error);
+  },
 
-    this.data.analyserEl.addEventListener('audioanalyserbuffersource', evt => {
-      this.source = evt.detail;
+  startPlayingSong: function () {
+      if (this.isAudioPlaying) { return; }  
+      this.audioAnalyser.resumeContext();
+      this.isAudioPlaying = true;
+      // Restart, get new buffer source node and play.
+      console.log('Starting playback ' + this.loadedAudio);
       this.songStartTime = this.context.currentTime;
       this.source.onended = this.onSongComplete;
       // Clear gain interpolation values from game over.
       const gain = this.audioAnalyser.gainNode.gain;
       gain.cancelScheduledValues(0);
-      gain.setValueAtTime(BASE_VOLUME, this.context.currentTime);
+      this.audioAnalyser.gainNode.gain.value = BASE_VOLUME;
 
       this.source.start(0, skipDebug || 0);
-      this.isAudioPlaying = true;
-    }, ONCE);
-
-    this.audioAnalyser.refreshSource();
+  },
+  // starts ( or restarts ) the song
+  startSong: function () { //startAudio onRestart
+    if (this.isPlaying) {
+      this.stopAudio();
+      this.loadSong(() => { this.startPlayingSong(); });
+    } else {
+      this.startPlayingSong();
+    }
   },
 
   getCurrentTime: function () {
