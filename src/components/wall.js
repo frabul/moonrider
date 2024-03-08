@@ -152,7 +152,7 @@ AFRAME.registerComponent('wall', {
       this.el.removeAttribute('raycastable-game');
       this.isCeiling = false;
       this.isRaycastable = false;
-      this.el.sceneEl.components.pool__wall.returnEntity(this.el);
     }
+    this.el.sceneEl.components.pool__wall.returnEntity(this.el);
   }
 });

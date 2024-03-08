@@ -481,6 +481,7 @@ AFRAME.registerComponent('beat-generator', {
         wallEl.components.wall.returnToPool();
     }
     this.wallsCache = {};
+    this.gameCleared = true;
   },
 
   /**
@@ -488,6 +489,11 @@ AFRAME.registerComponent('beat-generator', {
    */
   onRestart: function () {
     console.log("onRestart called");
+    if(!this.gameCleared){
+      console.warn("Game not cleared on restart");
+      this.onClearGame();
+    }
+    this.gameCleared = false;
     this.restartCompleted = false;
     const data = this.data;
     // Generate curve based on song duration.
