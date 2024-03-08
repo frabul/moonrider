@@ -9,8 +9,8 @@ AFRAME.registerComponent('tunnels', {
   dependencies: ['pool_tunnels'],
 
   schema: {
-    isPlaying: {default: false},
-    songDuration: {default: 0}
+    isPlaying: { default: false },
+    songDuration: { default: 0 }
   },
 
   init: function () {
@@ -51,13 +51,22 @@ AFRAME.registerComponent('tunnels', {
   addTunnel: function () {
     const tunnel = this.pool.requestEntity();
     if (!tunnel) { return; }
+
+    if (!this.templateGeometry) {
+      const templateEl = document.getElementById('tunnelObjTemplate');
+      if (templateEl && templateEl.getObject3D('mesh'))
+        this.templateGeometry = templateEl.getObject3D('mesh').children[0].geometry;
+    }
+    if(!this.templateGeometry) { return; }
+    if (!tunnel.getObject3D('mesh')) { tunnel.setObject3D('mesh', new THREE.Mesh()); }
+    tunnel.getObject3D('mesh').geometry = this.templateGeometry;
     tunnel.setAttribute('render-order', 'tunnel');
     tunnel.object3D.visible = true;
 
     const supercurve = this.curveEl.components.supercurve;
     let songPosition = (this.el.components.song.getCurrentTime() + SPAWN_DISTANCE) /
-    this.data.songDuration;
-    if (songPosition > 1) { songPosition = 1;}
+      this.data.songDuration;
+    if (songPosition > 1) { songPosition = 1; }
     supercurve.getPointAt(songPosition, tunnel.object3D.position);
     supercurve.alignToCurve(songPosition, tunnel.object3D);
 
@@ -74,6 +83,7 @@ AFRAME.registerComponent('tunnels', {
     for (let i = 0; i < this.tunnels.length; i++) {
       this.tunnels[i].object3D.visible = false;
       this.pool.returnEntity(this.tunnels[i]);
+      console.log('returning tunnel');
     }
     this.tunnels.length = 0;
   },
@@ -88,6 +98,7 @@ AFRAME.registerComponent('tunnels', {
         const tunnel = this.tunnels.splice(i, 1)[0];
         tunnel.object3D.visible = false;
         this.pool.returnEntity(tunnel);
+        console.log('returning tunnel');
       } else {
         // They're z-ordered, the rest of tunnels are in front of the player.
         return;
