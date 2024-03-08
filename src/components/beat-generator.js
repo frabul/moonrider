@@ -112,6 +112,13 @@ AFRAME.registerComponent('beat-generator', {
       this.processBeats();
     });
 
+    this.wallsCache = {};
+    // init eventAllowedTime and eventCooldown  
+    this.eventAllowedTime = new Array(50).fill(0);
+    this.eventCooldown = new Array(50).fill(200);
+    this.eventCooldown[8] = 800;
+    this.eventCooldown[9] = 800;
+
     /*
       // For debugging: generate beats on key space press.
       document.addEventListener('keydown', ev => {
@@ -200,7 +207,7 @@ AFRAME.registerComponent('beat-generator', {
     const events = this.beatData._events;
     if (events.length && events[0]._time < 0) {
       for (let i = 0; events[i]._time < 0; i++) {
-        this.generateEvent(events[i]);
+        this.generateEvent(0, events[i]);
       }
     }
 
@@ -388,23 +395,28 @@ AFRAME.registerComponent('beat-generator', {
       (songPosition + lengthPercent);
   },
 
-  generateEvent: function (event) {
+  generateEvent: function (time, event) {
+    if (this.eventCooldown(time, event)) {
+      return;
+    }
+    this.eventExecuted(time, event);
+    // for each type of event there is a cooldown time to avoid spamming
     switch (event._type) {
       case 0:
         this.stageColors.setColor('bg', event._value);
-        //this.stageColors.setColorInstant('moon', event._value);
+        this.stageColors.setColorInstant('moon', event._value);
         break;
       case 1:
-        //this.stageColors.setColorInstant('stars', event._value);
+        this.stageColors.setColorInstant('stars', event._value);
         break;
       case 2:
-        //this.stageColors.setColor('curveeven', event._value);
+        this.stageColors.setColor('curveeven', event._value);
         break;
       case 3:
-        //this.stageColors.setColor('curveodd', event._value);
+        this.stageColors.setColor('curveodd', event._value);
         break;
       case 4:
-        //this.stageColors.setColor('floor', event._value);
+        this.stageColors.setColor('floor', event._value);
         break;
       case 8:
         this.tube.emit('pulse', null, false);
@@ -413,10 +425,10 @@ AFRAME.registerComponent('beat-generator', {
         this.tube.emit('pulse', null, false);
         break;
       case 12:
-        //this.stageColors.setColor('leftglow', event._value);
+        this.stageColors.setColor('leftglow', event._value);
         break;
       case 13:
-        //this.stageColors.setColor('rightglow', event._value);
+        this.stageColors.setColor('rightglow', event._value);
         break;
     }
   },
@@ -464,6 +476,23 @@ AFRAME.registerComponent('beat-generator', {
     const data = this.data;
     this.curveEl.components.supercurve.generateCurve(data.speed * data.songDuration);
     this.curve = this.curveEl.components.supercurve.curve;
+    console.log("onRestart called");
+  },
+
+  eventCooldown: function (time, event) {
+    if (this.eventAllowedTime.length < event._type) {
+      console.error('eventAllowedTime.length < event._type');
+      return false;
+    }
+    return time >= this.eventAllowedTime[event._type];
+  },
+
+  eventExecuted: function (time, event) {
+    if (this.eventCooldown.length < event._type || this.eventAllowedTime.length < event._type) {
+      console.error('eventCooldown.length < event._type');
+      return false;
+    }
+    this.eventAllowedTime[event._type] = time + this.eventCooldown[event._type];
   }
 });
 
