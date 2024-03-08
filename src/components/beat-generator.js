@@ -26,16 +26,10 @@ AFRAME.registerComponent('beat-generator', {
   dependencies: ['stage-colors'],
 
   schema: {
-    challengeId: { type: 'string' }, // If clicked play.
-    gameMode: { type: 'string' }, // classic, punch, ride.
-    difficulty: { type: 'string' },
-    beatmapCharacteristic: { type: 'string' },
+    gameMode: { type: 'string' }, // classic, punch, ride. 
     has3DOFVR: { default: false },
-    hasSongLoadError: { default: false },
     isPlaying: { default: false },
     isLoading: { default: false },
-    isZipFetching: { default: false },
-    menuSelectedChallengeId: { type: 'string' },
     songDuration: { type: 'number' }, // Seconds.
     speed: { type: 'number' }
   },
@@ -86,7 +80,7 @@ AFRAME.registerComponent('beat-generator', {
   init: function () {
     this.audioAnalyserEl = document.getElementById('audioanalyser');
     this.beatContainer = document.getElementById('beatContainer');
-    this.beats = null;
+
     this.beatData = null;
     this.beatDataProcessed = false;
     this.preloadTime = 0;
@@ -104,14 +98,8 @@ AFRAME.registerComponent('beat-generator', {
     this.stageColors = this.el.components['stage-colors'];
 
     this.el.addEventListener('cleargame', this.onClearGame.bind(this));
-    this.el.addEventListener('gamemenurestart', this.onRestart.bind(this));
+    this.el.sceneEl.addEventListener('loadMap', this.onLoadMap.bind(this));
 
-    this.el.addEventListener('ziploaderend', evt => {
-      this.beats = evt.detail.beats;
-      if (!this.data.challengeId || this.data.hasSongLoadError) { return; }
-      this.beatData = this.beats[this.data.beatmapCharacteristic + '-' + this.data.difficulty];
-      this.processBeats();
-    });
     this.wallsCache = {};
     /*
       // For debugging: generate beats on key space press.
@@ -135,26 +123,6 @@ AFRAME.registerComponent('beat-generator', {
 
   update: function (oldData) {
     const data = this.data;
-
-    // Song selected and clicked play.
-    if (!oldData.isLoading && data.isLoading && data.challengeId) {
-      this.index.events = 0;
-      this.index.notes = 0;
-      this.index.obstacles = 0;
-
-      // Process.
-      if (!this.data.isZipFetching && this.beats && !this.data.hasSongLoadError) {
-        this.beatData = this.beats[this.data.beatmapCharacteristic + '-' + this.data.difficulty];
-        this.processBeats();
-      }
-
-      // if skipDebug is set then we need to set index according to the time
-      this.setIndexAtTime(skipDebug);
-
-
-      this.onRestart();
-
-    }
   },
 
   setIndexAtTime: function (time) {
@@ -178,7 +146,6 @@ AFRAME.registerComponent('beat-generator', {
    * Load the beat data into the game.
    */
   processBeats: function () {
-    if (this.data.hasSongLoadError) { return; }
     // if there is version and first character is 3, convert to 2.xx
     if (this.beatData.version && this.beatData.version.charAt(0) === '3') {
       this.beatData = convertBeatData_320_to_2xx(this.beatData);
@@ -204,7 +171,7 @@ AFRAME.registerComponent('beat-generator', {
         this.generateEvent(events[i]);
       }
     }
-    
+
     const obstacles = this.beatData._obstacles;
     for (let i = 0; i < obstacles.length; ++i) {
       let wallInfo = obstacles[i];
@@ -214,7 +181,7 @@ AFRAME.registerComponent('beat-generator', {
       wallInfo._type = 0;
       wallInfo._width = 1;
     }
-     
+
 
     this.beatDataProcessed = true;
     console.log('[beat-generator] Finished processing beat data.');
@@ -224,7 +191,7 @@ AFRAME.registerComponent('beat-generator', {
    * Generate beats and stuff according to timestamp.
    */
   tick: function (time, delta) {
-    if (!this.data.isPlaying || !this.data.challengeId || !this.beatData || !this.restartCompleted) { return; }
+    if (!this.data.isPlaying || !this.beatData || !this.readyToStart) { return; }
 
     let songTime;
     const song = this.el.components.song;
@@ -455,17 +422,30 @@ AFRAME.registerComponent('beat-generator', {
     return pool.requestEntity();
   },
 
+  onLoadMap: function (eventtData) {
+    // must do it with some delay because we need to beat-system to be ready first
+    setTimeout(() => {
+      this.index.events = 0;
+      this.index.notes = 0;
+      this.index.obstacles = 0;
+
+      this.beatData = eventtData.detail;
+      this.processBeats();
+      // if skipDebug is set then we need to set index according to the time
+      this.setIndexAtTime(skipDebug);
+      this.onRestart();
+    }, 10);
+  },
   /**
    * Restart by returning all beats to pool.
    */
   onClearGame: function () {
     console.log("Clearing game");
-    this.restartCompleted = false;
     this.preloadTime = 0;
     this.index.events = 0;
     this.index.notes = 0;
     this.index.obstacles = 0;
-
+    this.readyToStart = false;
     for (let i = 0; i < this.beatContainer.children.length; i++) {
       const child = this.beatContainer.children[i];
       child.object3D.position.set(0, 0, -9999);
@@ -482,24 +462,16 @@ AFRAME.registerComponent('beat-generator', {
     }
     this.wallsCache = {};
     this.gameCleared = true;
+
   },
 
-  /**
-   * Regenerate.
-   */
-  onRestart: function () {
-    console.log("onRestart called");
-    if(!this.gameCleared){
-      console.warn("Game not cleared on restart");
-      this.onClearGame();
-    }
+  restartGame: function () {
     this.gameCleared = false;
-    this.restartCompleted = false;
     const data = this.data;
     // Generate curve based on song duration.
     this.curveEl.components.supercurve.generateCurve(data.speed * data.songDuration);
     this.curve = this.curveEl.components.supercurve.curve;
-    if(this.wallsCache.length > 0)
+    if (this.wallsCache.length > 0)
       console.warn("wallsCache not empty on restart");
     this.wallsCache = {};
     setTimeout(() => {
@@ -508,8 +480,26 @@ AFRAME.registerComponent('beat-generator', {
         const wall = this.generateWall(obstacles[i], "wall_" + i);
         this.wallsCache[i] = wall;
       }
-      this.restartCompleted = true;
+
+      this.readyToStart = true;
+      this.el.sceneEl.emit('beatGeneratorReady');
     });
+  },
+  /**
+   * Regenerate.
+   */
+  onRestart: function () {
+    console.log("onRestart called");
+    if (!this.gameCleared) {
+      console.warn("Game not cleared on restart");
+      this.onClearGame();
+      // in this case we must wait that game is cleared before we can restart
+      setTimeout(() => {
+        this.restartGame();
+      }, 70);
+    } else {
+      this.restartGame();
+    }
   }
 });
 
