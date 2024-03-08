@@ -1,7 +1,7 @@
 const utils = require('../utils');
 
 const GAME_OVER_LENGTH = 3.5;
-const ONCE = {once: true};
+const ONCE = { once: true };
 const BASE_VOLUME = 0.5;
 
 let skipDebug = AFRAME.utils.getUrlParameter('skip');
@@ -26,18 +26,18 @@ if (!!skipDebug) {
  */
 AFRAME.registerComponent('song', {
   schema: {
-    audio: {type: 'string'}, // Blob URL.
-    analyserEl: {type: 'selector', default: '#audioAnalyser'},
-    challengeId: {default: ''},
-    isBeatsPreloaded: {default: false},
-    isGameOver: {default: false},
-    isLoading: {default: false},
-    isPlaying: {default: false},
-    isVictory: {default: false}
+    audio: { type: 'string' }, // Blob URL.
+    analyserEl: { type: 'selector', default: '#audioAnalyser' },
+    challengeId: { default: '' },
+    isBeatsPreloaded: { default: false },
+    isGameOver: { default: false },
+    isLoading: { default: false },
+    isPlaying: { default: false },
+    isVictory: { default: false }
   },
 
   init: function () {
-    this.analyserSetter = {buffer: true};
+    this.analyserSetter = { buffer: true };
     this.audioAnalyser = this.data.analyserEl.components.audioanalyser;
     this.context = this.audioAnalyser.context;
     this.isAudioPlaying = false;
@@ -48,9 +48,12 @@ AFRAME.registerComponent('song', {
     // Base volume.
     this.audioAnalyser.gainNode.gain.value = BASE_VOLUME;
 
-    this.el.addEventListener('gamemenurestart', this.onRestart.bind(this));
     this.el.addEventListener('wallhitstart', this.onWallHitStart.bind(this));
     this.el.addEventListener('wallhitend', this.onWallHitEnd.bind(this));
+
+    this.el.sceneEl.addEventListener('loadSong', this.loadSong.bind(this));
+    this.el.sceneEl.addEventListener('gamemenurestart', this.restartSong.bind(this));
+    this.el.sceneEl.addEventListener('startSong', this.restartSong.bind(this));
 
     if (process.env.NODE_ENV !== 'production') {
       this.el.addEventListener('victoryfake', () => {
@@ -64,19 +67,6 @@ AFRAME.registerComponent('song', {
 
   update: function (oldData) {
     const data = this.data;
-
-    // Loading start while audio blob URL already set.
-    if (!oldData.isLoading && data.isLoading && data.audio) {
-      this.processAudio();
-      return;
-    }
-
-    // Audio blob URL set while already loading.
-    if (!oldData.audio && data.audio && data.isLoading) {
-      this.processAudio();
-      return;
-    }
-
     // Game over, slow down audio, and then stop.
     if (!oldData.isGameOver && data.isGameOver) {
       this.onGameOver();
@@ -102,11 +92,6 @@ AFRAME.registerComponent('song', {
       return;
     }
 
-    // New challenge, play if we have loaded and were waiting for beats to preload.
-    if (!oldData.isBeatsPreloaded && this.data.isBeatsPreloaded && this.source) {
-      this.startAudio();
-    }
-
     if (oldData.challengeId && !data.challengeId) {
       this.stopAudio();
       return;
@@ -125,31 +110,10 @@ AFRAME.registerComponent('song', {
     }
   },
 
-  processAudio: function () {
-    this.el.sceneEl.emit('songprocessstart', null, false);
-    this.getAudio().then(source => {
-      this.el.sceneEl.emit('songprocessfinish', null, false);
-    }).catch(console.error);
-  },
 
-  getAudio: function () {
-    const data = this.data;
-
-    if (this.source) { this.stopAudio(); }
-
-    this.isAudioPlaying = false;
-    return new Promise(resolve => {
-      data.analyserEl.addEventListener('audioanalyserbuffersource', evt => {
-        // Finished decoding.
-        this.source = evt.detail;
-        resolve(this.source);
-      }, ONCE);
-      this.analyserSetter.src = this.data.audio;
-      data.analyserEl.setAttribute('audioanalyser', this.analyserSetter);
-    });
-  },
 
   stopAudio: function () {
+    console.log('Stopping song ' + this.data.audio);
     if (!this.source) {
       console.warn('[song] Tried to stopAudio, but not playing.');
       return;
@@ -185,23 +149,6 @@ AFRAME.registerComponent('song', {
     }, 3500);
   },
 
-  onRestart: function () {
-    this.isAudioPlaying = false;
-
-    // Restart, get new buffer source node and play.
-    if (this.source) { this.source.disconnect(); }
-
-    // Clear gain interpolation values from game over.
-    const gain = this.audioAnalyser.gainNode.gain;
-    gain.cancelScheduledValues(0);
-
-    this.data.analyserEl.addEventListener('audioanalyserbuffersource', evt => {
-      this.source = evt.detail;
-      this.el.sceneEl.emit('songloadfinish', null, false);
-    }, ONCE);
-    this.audioAnalyser.refreshSource();
-  },
-
   onWallHitStart: function () {
     const gain = this.audioAnalyser.gainNode.gain;
     gain.linearRampToValueAtTime(0.1, this.context.currentTime + 0.1);
@@ -212,16 +159,62 @@ AFRAME.registerComponent('song', {
     gain.linearRampToValueAtTime(BASE_VOLUME, this.context.currentTime + 0.1);
   },
 
-  startAudio: function () {
-    const gain = this.audioAnalyser.gainNode.gain;
-    gain.setValueAtTime(BASE_VOLUME, this.context.currentTime);
-    this.songStartTime = this.context.currentTime;
-    this.source.onended = this.onSongComplete;
-    this.source.start(0, skipDebug || 0);
-    this.isAudioPlaying = true;
+
+  getAudio: function () {
+    const data = this.data;
+
+    if (this.source) { this.stopAudio(); }
+    console.log("Loading song " + data.audio);
+    this.isAudioPlaying = false;
+    return new Promise(resolve => {
+      data.analyserEl.addEventListener('audioanalyserbuffersource', evt => {
+        // Finished decoding.
+        this.source = evt.detail;
+        resolve(this.source);
+      }, ONCE);
+      this.analyserSetter.src = this.data.audio;
+      data.analyserEl.setAttribute('audioanalyser', this.analyserSetter);
+    });
+  },
+
+  loadSong: function () {
+    this.el.sceneEl.emit('songprocessstart', null, false);
+    this.getAudio().then(source => {
+      this.loadedAudio = this.data.audio;
+      console.log("Song loaded " + this.loadedAudio);
+      this.el.sceneEl.emit('songprocessfinish', null, false);
+    }).catch(console.error);
+  },
+
+  // starts ( or restarts ) the song
+  startSong: function () { //startAudio onRestart
+    if (this.source) {
+      this.stopAudio();
+    }
+    // Restart, get new buffer source node and play.
+    console.log('Restarting song ' + this.loadedAudio);
+
+    this.data.analyserEl.addEventListener('audioanalyserbuffersource', evt => {
+      this.source = evt.detail;
+      this.songStartTime = this.context.currentTime;
+      this.source.onended = this.onSongComplete;
+      // Clear gain interpolation values from game over.
+      const gain = this.audioAnalyser.gainNode.gain;
+      gain.cancelScheduledValues(0);
+      gain.setValueAtTime(BASE_VOLUME, this.context.currentTime);
+
+      this.source.start(0, skipDebug || 0);
+      this.isAudioPlaying = true;
+    }, ONCE);
+
+    this.audioAnalyser.refreshSource();
   },
 
   getCurrentTime: function () {
     return this.context.currentTime - this.songStartTime;
+  },
+
+  isAudioLoaded: function () {
+    return this.loadedAudio === this.data.audio;
   }
 });
