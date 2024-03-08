@@ -2,7 +2,16 @@ import { SIZES } from './beat';
 
 const HEIGHT = 2.5;
 const CEILING_THICKNESS = 1.5;
+class z_range {
+  constructor(min, max) {
+    this.min = min;
+    this.max = max;
+  }
+  length() {
+    return this.max - this.min;
+  }
 
+}
 /**
  * Wall to dodge.
  */
@@ -19,10 +28,22 @@ AFRAME.registerComponent('wall', {
     this.localPosition = new THREE.Vector3();
     this.songPosition = undefined;
     this.tick = AFRAME.utils.throttleTick(this.tick.bind(this), 1000);
+    this.zrange = new z_range(-0.5, 0.5);
+    this.isOnTheScene = false;
+
   },
 
   play: function () {
+    console.log('wall played, name ' + this.el.wallName);
     this.el.object3D.visible = true;
+  },
+
+  enterTheScene: function () {
+    console.log('wall entering scene: ' + this.el);
+    this.el.play();
+    this.el.components.animation__fadein.beginAnimation();
+    this.el.components.animation__scalein.beginAnimation();
+    this.isOnTheScene = true;
   },
 
   tick: function (time, timeDelta) {
@@ -37,10 +58,13 @@ AFRAME.registerComponent('wall', {
       }
     }
 
-    if (songProgress >= this.backPosition + 0.01) { this.returnToPool(); }
+    if (songProgress >= this.backPosition + 0.01) {
+      this.returnToPool();
+    }
   },
 
   onGenerate: function (songPosition, horizontalPosition, width, length, isCeiling, backPosition) {
+    console.log('wall onGenerate, name ' + this.el.wallName);
     const el = this.el;
     this.isCeiling = isCeiling;
     this.backPosition = backPosition;
@@ -48,8 +72,7 @@ AFRAME.registerComponent('wall', {
     this.setWallGeometry(songPosition, horizontalPosition, width, length, isCeiling);
     el.getObject3D('mesh').material.uniforms.opacity.value = 0;
     el.object3D.position.y = -5;
-    el.components.animation__fadein.beginAnimation();
-    el.components.animation__scalein.beginAnimation();
+
   },
 
   /**
@@ -94,6 +117,11 @@ AFRAME.registerComponent('wall', {
         positions[i] = modifiedVertexPos.x;
         positions[i + 1] += modifiedVertexPos.y + height / 2;
         positions[i + 2] = modifiedVertexPos.z;
+
+        // log error if any position is not a number
+        if (isNaN(positions[i]) || isNaN(positions[i + 1]) || isNaN(positions[i + 2])) {
+          console.error('position is NaN', positions[i], positions[i + 1], positions[i + 2]);
+        }
       }
 
       // Notes are higher in punch so lower a tad.
@@ -106,15 +134,25 @@ AFRAME.registerComponent('wall', {
   })(),
 
   returnToPool: function () {
-    this.el.object3D.visible = false;
-    this.el.removeAttribute('data-weapon-particles');
-    this.el.removeAttribute('data-wall-active');
-    this.el.removeAttribute('raycastable-game');
-    this.isCeiling = false;
-    this.isRaycastable = false;
-    if (this.el.isPlaying) {
+    console.log('returning wall to pool, name ' + this.el.wallName);
+    if (this.geometry) {
+      setTimeout(() => {
+        console.log('disposing geometry');
+        this.geometry.dispose();
+        this.geometry = null;
+        this.el.getObject3D('mesh').geometry = null;
+      }, 50);
+    }
+    if (this.isOnTheScene == true) {
+      console.log('wall returning to pool, name ' + this.el.wallName);
+      this.isOnTheScene = false;
+      this.el.object3D.visible = false;
+      this.el.removeAttribute('data-weapon-particles');
+      this.el.removeAttribute('data-wall-active');
+      this.el.removeAttribute('raycastable-game');
+      this.isCeiling = false;
+      this.isRaycastable = false;
       this.el.sceneEl.components.pool__wall.returnEntity(this.el);
     }
-    if (this.geometry) { this.geometry.dispose(); }
   }
 });

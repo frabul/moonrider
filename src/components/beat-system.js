@@ -57,7 +57,7 @@ AFRAME.registerComponent('beat-system', {
     update: function (oldData) {
         this.size = SIZES[this.data.gameMode];
 
-        if (oldData.isLoading && !this.data.isLoading) {
+        if (!oldData.isLoading && this.data.isLoading) {
             this.updateBeatPositioning();
             this.weaponOffset = this.data.gameMode === CLASSIC ? SWORD_OFFSET : PUNCH_OFFSET;
             this.weaponOffset = this.weaponOffset * 1.5 / this.supercurve.curve.getLength();
