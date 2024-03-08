@@ -390,6 +390,16 @@ AFRAME.registerState({
       state.isLoading = true;
       state.isVictory = false;
       state.leaderboardQualified = false;
+
+      state.goodHits.length = 0;
+
+      // 
+      state.songReady = false;
+      state.beatSystemReady = true;
+      state.beatGeneratorReady = false;
+      state.currentMapData = state.challenge.data.beats[state.challenge.beatmapCharacteristic + '-' + state.challenge.difficulty];
+      window.scene.emit('loadSong');
+      window.scene.emit('loadMap', state.currentMapData);
     },
 
     gamemenuexit: state => {
