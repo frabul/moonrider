@@ -80,6 +80,7 @@ AFRAME.registerState({
       songNameShort: '',
       songSubName: '',
       metadata: {},
+      data: {}, // the map definition returned by beatloader, 
     },
     colorPrimary: COLORS.schemes[colorScheme].primary,
     colorScheme: colorScheme,
@@ -182,6 +183,10 @@ AFRAME.registerState({
     enableStats: false,
     hitsDebugString: '',
     goodHits: [],
+
+    songReady: false,
+    beatSystemReady: true,
+    beatGeneratorReady: false,
   },
 
   handlers: {
@@ -592,7 +597,7 @@ AFRAME.registerState({
       const challenge = state.menuSelectedChallenge;
       let info = JSON.parse(challenge.metadata.characteristics)[state.menuSelectedChallenge.beatmapCharacteristic][state.menuSelectedChallenge.difficulty];
       state.speed = info.njs;
-      
+
       clearLeaderboard(state);
       state.leaderboardLoading = true;
     },
@@ -648,6 +653,14 @@ AFRAME.registerState({
       gtag('event', 'colorscheme', { event_label: state.colorScheme });
 
       state.goodHits.length = 0;
+
+      // 
+      state.songReady = false;
+      state.beatSystemReady = true;
+      state.beatGeneratorReady = false;
+      state.currentMapData = state.challenge.data.beats[state.challenge.beatmapCharacteristic + '-' + state.challenge.difficulty];
+      window.scene.emit('loadSong');
+      window.scene.emit('loadMap', state.currentMapData);
     },
 
     playlistclear: (state, playlist) => {
@@ -841,14 +854,26 @@ AFRAME.registerState({
       state.isZipFetching = false;
     },
 
-    songprocessfinish: state => {
-      state.isSongProcessing = false;
-      state.isLoading = false;  // Done loading after final step!
-    },
-
     songprocessstart: state => {
       state.isSongProcessing = true;
       state.loadingText = 'Wrapping up...';
+    },
+    songprocessfinish: state => {
+      state.isSongProcessing = false;
+      state.songReady = true;
+      const loading = !(state.songReady && state.beatSystemReady && state.beatGeneratorReady);
+      if (state.isLoading && !loading) {
+        window.scene.emit('startSong');
+        state.isLoading = false;
+      }
+    },
+    beatGeneratorReady: state => {
+      state.beatGeneratorReady = true;
+      const loading = !(state.songReady && state.beatSystemReady && state.beatGeneratorReady);
+      if (state.isLoading && !loading) {
+        window.scene.emit('startSong');
+        state.isLoading = false;
+      }
     },
 
     'enter-vr': state => {
@@ -884,9 +909,11 @@ AFRAME.registerState({
 
     ziploaderend: (state, payload) => {
       state.challenge.audio = payload.audio;
+      state.challenge.data = payload;
       state.hasSongLoadError = false;
       state.menuSelectedChallenge.version = '';
       state.isZipFetching = false;
+
     },
 
     ziploaderstart: state => {
