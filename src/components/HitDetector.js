@@ -375,7 +375,7 @@ export class PunchHitDetector {
             }
 
             const percent = score / (base + 70);
-            this.score = { score: score, percent: percent };
+            this.hitData = { good: true, score: score, percent: percent };
         }
         return this.HitDetected;
     }
