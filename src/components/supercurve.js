@@ -18,7 +18,7 @@ skipDebug = parseInt(skipDebug, 10);
  */
 AFRAME.registerComponent('supercurve', {
   schema: {
-    debug: {default: false}
+    debug: { default: false }
   },
 
   init: function () {
@@ -153,8 +153,8 @@ AFRAME.registerComponent('supercurve', {
 
       if (this.data.debug) {
         const sphere = document.createElement('a-box');
-        sphere.setAttribute('geometry', {width: 0.1, height: 0.1, depth: 0.1});
-        sphere.setAttribute('material', {shader: 'flat', color: '#333'});
+        sphere.setAttribute('geometry', { width: 0.1, height: 0.1, depth: 0.1 });
+        sphere.setAttribute('material', { shader: 'flat', color: '#333' });
         sphere.object3D.position.copy(point);
         sphere.object3D.position.y += 0.1;
         el.appendChild(sphere);
@@ -259,14 +259,18 @@ AFRAME.registerComponent('supercurve', {
  */
 AFRAME.registerComponent('supercurve-follow', {
   schema: {
-    enabled: {default: false},
-    speed: {type: 'number'},
-    target: {type: 'selector'}
+    enabled: { default: false },
+    speed: { type: 'number' },
+    target: { type: 'selector' }
   },
 
   init: function () {
     this.curveProgress = 0;
     this.songProgress = 0;
+    // give time to setup the scene
+    setTimeout(() => {
+      this.song = document.querySelector('a-scene').components.song;
+    }, 200);
   },
 
   update: function () {
@@ -281,19 +285,15 @@ AFRAME.registerComponent('supercurve-follow', {
       const data = this.data;
       const el = this.el;
 
-      if (!data.enabled || !dt) { return; }
+      if (!data.enabled) { return; }
 
       if (this.curveProgress >= 1) { return; }
 
       const supercurve = this.supercurve;
-      const curve = supercurve.curve;
-      if (!curve) { return; }
 
       // Update progress based on speed.
-      this.curveProgress = this.curveProgress || ((skipDebug * data.speed / 1000) / this.supercurve.fullLength); // if curveProgress is 0, set it according to skipDebug 
-      const distanceTraveled = data.speed * (dt / 1000);
-      this.curveProgress += distanceTraveled / this.supercurve.fullLength;
-
+      this.songProgress = this.song.getCurrentProgress();
+      this.curveProgress = supercurve.songProgressToCurveProgress(this.songProgress);
       this.data.target.components.material.material.uniforms.cameraPercent.value =
         this.curveProgress;
 
@@ -305,8 +305,7 @@ AFRAME.registerComponent('supercurve-follow', {
       }
 
       // Update lookAt down the tangent.
-      curve.getPointAt(this.curveProgress, this.el.object3D.position);
-      this.songProgress = supercurve.curveProgressToSongProgress(this.curveProgress);
+      supercurve.getPointAt(this.songProgress, this.el.object3D.position);
       supercurve.alignToCurve(this.songProgress, this.el.object3D);
     };
   })()

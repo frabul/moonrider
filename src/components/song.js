@@ -1,3 +1,4 @@
+const { functions } = require('firebase');
 const utils = require('../utils');
 
 const GAME_OVER_LENGTH = 3.5;
@@ -33,7 +34,8 @@ AFRAME.registerComponent('song', {
     isGameOver: { default: false },
     isLoading: { default: false },
     isPlaying: { default: false },
-    isVictory: { default: false }
+    isVictory: { default: false },
+    duration: { type: 'number' }
   },
 
   init: function () {
@@ -179,7 +181,7 @@ AFRAME.registerComponent('song', {
       }, ONCE);
       if (this.loadedAudio == this.data.audio) {
         this.audioAnalyser.refreshSource();
-      } else { 
+      } else {
         this.analyserSetter.src = this.data.audio;
         data.analyserEl.setAttribute('audioanalyser', this.analyserSetter);
       }
@@ -198,19 +200,19 @@ AFRAME.registerComponent('song', {
   },
 
   startPlayingSong: function () {
-      if (this.isAudioPlaying) { return; }  
-      this.audioAnalyser.resumeContext();
-      this.isAudioPlaying = true;
-      // Restart, get new buffer source node and play.
-      console.log('Starting playback ' + this.loadedAudio);
-      this.songStartTime = this.context.currentTime;
-      this.source.onended = this.onSongComplete;
-      // Clear gain interpolation values from game over.
-      const gain = this.audioAnalyser.gainNode.gain;
-      gain.cancelScheduledValues(0);
-      this.audioAnalyser.gainNode.gain.value = BASE_VOLUME;
+    if (this.isAudioPlaying) { return; }
+    this.audioAnalyser.resumeContext();
+    this.isAudioPlaying = true;
+    // Restart, get new buffer source node and play.
+    console.log('Starting playback ' + this.loadedAudio);
+    this.songStartTime = this.context.currentTime;
+    this.source.onended = this.onSongComplete;
+    // Clear gain interpolation values from game over.
+    const gain = this.audioAnalyser.gainNode.gain;
+    gain.cancelScheduledValues(0);
+    this.audioAnalyser.gainNode.gain.value = BASE_VOLUME;
 
-      this.source.start(0, skipDebug || 0);
+    this.source.start(0, skipDebug || 0);
   },
   // starts ( or restarts ) the song
   startSong: function () { //startAudio onRestart
@@ -223,9 +225,13 @@ AFRAME.registerComponent('song', {
   },
 
   getCurrentTime: function () {
-    return this.context.currentTime - this.songStartTime;
+    if (!this.isAudioPlaying) { return 0; }
+    const dt = this.context.currentTime - this.songStartTime;
+    return Math.min(dt, this.data.duration);
   },
-
+  getCurrentProgress: function () {
+    return this.getCurrentTime() / this.data.duration;
+  },
   isAudioLoaded: function () {
     return this.loadedAudio === this.data.audio;
   }

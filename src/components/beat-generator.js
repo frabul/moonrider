@@ -6,7 +6,7 @@ skipDebug = parseInt(skipDebug, 10);
 const DEBUG_MINES = AFRAME.utils.getUrlParameter('debugmines');
 const beatForwardTime = parseInt(AFRAME.utils.getUrlParameter('beatforwardtime'), 10);
 // Beats arrive at sword stroke distance synced with the music.
-export const BEAT_ANTICIPATION_TIME = 1.1;
+export const BEAT_ANTICIPATION_TIME = 0;
 export const BEAT_PRELOAD_TIME = 1.1;
 export const PUNCH_OFFSET = 0.5;
 export const SWORD_OFFSET = 1.5;
