@@ -166,7 +166,8 @@ AFRAME.registerComponent('beat-generator', {
     for (let i = 0; i < obstacles.length - 1; ++i) {
       const current = obstacles[i];
       const next = obstacles[i + 1];
-      if (current._time + current._duration > next._time || next._time - current._time < 1) {
+      const wallSamePosition = current._lineIndex === next._lineIndex && current._type === next._type && current._width === next._width;
+      if (wallSamePosition && (current._time + current._duration > next._time || next._time - current._time < 1)) {
         current._duration = next._time + next._duration - current._time;
         obstacles.splice(i + 1, 1);
         --i;
