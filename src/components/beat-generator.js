@@ -161,6 +161,18 @@ AFRAME.registerComponent('beat-generator', {
     this.beatData._notes.sort(lessThan);
     this.bpm = this.beatData._beatsPerMinute;
 
+    // Performance: merge obstacles that are compenetrating or with distance lower than 1 second
+    const obstacles = this.beatData._obstacles;
+    for (let i = 0; i < obstacles.length - 1; ++i) {
+      const current = obstacles[i];
+      const next = obstacles[i + 1];
+      if (current._time + current._duration > next._time || next._time - current._time < 1) {
+        current._duration = next._time + next._duration - current._time;
+        obstacles.splice(i + 1, 1);
+        --i;
+      }
+    }
+
     // Performance: Remove all obstacles if there are more than 256 (often used with Noodle Extensions)
     if (this.beatData._obstacles.length > 256) {
       this.beatData._obstacles = [];
