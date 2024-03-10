@@ -143,7 +143,7 @@ AFRAME.registerComponent('wall', {
         this.geometry.dispose();
         this.geometry = null;
         this.el.getObject3D('mesh').geometry = null;
-      }, 50);
+      }, 20);
     }
     if (this.isOnTheScene == true) {
       console.log('wall returning to pool, name ' + this.el.wallName);

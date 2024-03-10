@@ -88,7 +88,7 @@ AFRAME.registerComponent('beat-generator', {
     this.rightStageLasers = document.getElementById('rightStageLasers');
     this.stageColors = this.el.components['stage-colors'];
 
-    this.el.addEventListener('cleargame', this.onClearGame.bind(this));
+    //this.el.addEventListener('cleargame', this.onClearGame.bind(this));
     this.el.sceneEl.addEventListener('loadMap', this.onLoadMap.bind(this));
 
     this.wallsCache = {};
@@ -481,7 +481,7 @@ AFRAME.registerComponent('beat-generator', {
       // in this case we must wait that game is cleared before we can restart
       setTimeout(() => {
         this.restartGame();
-      }, 70);
+      }, 200);
     } else {
       this.restartGame();
     }
@@ -552,9 +552,6 @@ AFRAME.registerComponent('beat-generator', {
     const percent = this.songProgressToMapProgress(songProgress);
     this.supercurve.alignToCurve(percent, object3D);
   },
-
-  
-
 });
 
 function lessThan(a, b) { return a._time - b._time; }
