@@ -51,7 +51,7 @@ AFRAME.registerComponent('gpu-preloader', {
 
   preloadEnvMap: function () {
     const wall = document.querySelector('#wallContainer [wall]');
-    this.preloadTexture(wall.components.material.material.uniforms.environment.value);
+    //this.preloadTexture(wall.components.material.material.uniforms.environment.value);
   },
 
   preloadFXs: function () {

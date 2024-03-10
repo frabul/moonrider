@@ -2,8 +2,9 @@ const COLORS = require('../constants/colors');
 
 AFRAME.registerShader('wallShader', {
   schema: {
+    colorPrimary: {type: 'color', is: 'uniform', default: COLORS.initial.primary},
     colorTertiary: {type: 'color', is: 'uniform', default: COLORS.initial.tertiary},
-    environment: {type: 'map', is: 'uniform', default: '#envmapImg'},
+    //environment: {type: 'map', is: 'uniform', default: '#envmapImg'},
     hitLeft: {type: 'vec3', is: 'uniform', default: {x: 0, y: 9000, z: 0}},
     hitRight: {type: 'vec3', is: 'uniform', default: {x: 0, y: 9000, z: 0}},
     iTime: {type: 'time', is: 'uniform'},

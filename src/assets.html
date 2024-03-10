@@ -203,7 +203,7 @@
 
 <a-mixin
   id="wall"
-  material="shader: wallShader; transparent: true; side: double; opacity: 0"
+  material="shader: wallShader; transparent: false; side: double; opacity: 0"
   animation__fadein="property: components.material.material.uniforms.opacity.value; from: 0; to: 1; easing: easeInCubic; autoplay: false; dur: 1500"
   animation__scalein="property: object3D.position.y; from: -5; to: 0; easing: easeInOutElastic; autoplay: false; dur: 1500"
   render-order
