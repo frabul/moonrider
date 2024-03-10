@@ -1,6 +1,6 @@
 uniform float iTime;
 uniform float opacity;
-uniform sampler2D environment;
+uniform vec3 colorPrimary;
 uniform vec3 colorTertiary;
 uniform vec3 hitLeft;
 uniform vec3 hitRight;
@@ -39,11 +39,8 @@ void main() {
   hit = drawHit(worldPos, hitRight, colorTertiary);
   hit += drawHit(worldPos, hitLeft, colorTertiary);
 
-  // reflection
-  vec3 ray = reflect(normalize(cameraPosition - worldPos + sin(worldPos.z) * 0.1 + cos(worldPos.z * 0.3) * 0.3), nrml);
-  float m = 2.0 * sqrt(pow(ray.x, 2.0) + pow(ray.y, 2.0) + pow(ray.z, 2.0));
-  vec2 uv = ray.xy / m + 0.5;
-  vec3 col = texture2D(environment, uv).rgb * 0.3;
+  // reflection (disabled)
+  vec3 col = colorPrimary * 0.2;
 
   gl_FragColor = vec4(mix(col, colorTertiary, alpha) + hit.rgb, (alpha * 0.2 + 0.8) * opacity + hit.a);
 }
