@@ -7,10 +7,9 @@ const DEBUG_MINES = AFRAME.utils.getUrlParameter('debugmines');
 const beatForwardTime = parseInt(AFRAME.utils.getUrlParameter('beatforwardtime'), 10);
 // Beats arrive at sword stroke distance synced with the music.
 export const BEAT_ANTICIPATION_TIME = 0;
-export const BEAT_PRELOAD_TIME = 1.1;
 export const PUNCH_OFFSET = 0.5;
 export const SWORD_OFFSET = 1.5;
-
+const MAP_WARMUP_TIME = 1;
 // How far out to load beats (ms).
 const isMobile = AFRAME.utils.device.isMobile();
 
@@ -30,8 +29,8 @@ AFRAME.registerComponent('beat-generator', {
     has3DOFVR: { default: false },
     isPlaying: { default: false },
     isLoading: { default: false },
-    songDuration: { type: 'number' }, // Seconds.
-    speed: { type: 'number' }
+    speed: { type: 'number' },
+    challengeInfo: { default: null },
   },
 
   orientationsHumanized: [
@@ -78,21 +77,13 @@ AFRAME.registerComponent('beat-generator', {
   },
 
   init: function () {
-    this.audioAnalyserEl = document.getElementById('audioanalyser');
     this.beatContainer = document.getElementById('beatContainer');
-
     this.beatData = null;
     this.beatDataProcessed = false;
-    this.preloadTime = 0;
-    this.songTime = undefined;
     this.bpm = undefined;
-    this.curve = null;
-    this.curveEl = document.getElementById('curve');
-    this.curveFollowRigEl = document.getElementById('curveFollowRig');
     this.tube = document.getElementById('tube');
     this.index = { events: 0, notes: 0, obstacles: 0 };
     this.wallContainer = document.getElementById('wallContainer');
-
     this.leftStageLasers = document.getElementById('leftStageLasers');
     this.rightStageLasers = document.getElementById('rightStageLasers');
     this.stageColors = this.el.components['stage-colors'];
@@ -107,6 +98,13 @@ AFRAME.registerComponent('beat-generator', {
     this.eventCooldown[8] = 500;
     this.eventCooldown[9] = 500;
 
+
+
+    setTimeout(() => {
+      this.song = this.el.components.song;
+      this.supercurve = document.getElementById('curve').components.supercurve;
+      this.el.sceneEl.addEventListener('startSong', () => { this.song.startSong(MAP_WARMUP_TIME) });
+    }, 100);
     /*
       // For debugging: generate beats on key space press.
       document.addEventListener('keydown', ev => {
@@ -157,9 +155,7 @@ AFRAME.registerComponent('beat-generator', {
       this.beatData = convertBeatData_320_to_2xx(this.beatData);
     }
     // Reset variables used during playback.
-    // Beats spawn ahead of the song and get to the user in sync with the music.
-    this.songTime = 0;
-    this.preloadTime = 0;
+    // Beats spawn ahead of the song and get to the user in sync with the music.  
     this.beatData._events.sort(lessThan);
     this.beatData._obstacles.sort(lessThan);
     this.beatData._notes.sort(lessThan);
@@ -170,13 +166,6 @@ AFRAME.registerComponent('beat-generator', {
       this.beatData._obstacles = [];
     }
 
-    // Some events have negative time stamp to initialize the stage.
-    const events = this.beatData._events;
-    if (events.length && events[0]._time < 0) {
-      for (let i = 0; events[i]._time < 0; i++) {
-        this.generateEvent(0, events[i]);
-      }
-    }
     // code to debug obstacles performance
     //const obstacles = this.beatData._obstacles;
     //for (let i = 0; i < obstacles.length; ++i) {
@@ -187,7 +176,7 @@ AFRAME.registerComponent('beat-generator', {
     //  wallInfo._type = 0;
     //  wallInfo._width = 1;
     //}
-    
+
     this.beatDataProcessed = true;
     console.log('[beat-generator] Finished processing beat data.');
   },
@@ -198,18 +187,7 @@ AFRAME.registerComponent('beat-generator', {
   tick: function (time, delta) {
     if (!this.data.isPlaying || !this.beatData || !this.readyToStart) { return; }
 
-    let songTime;
-    const song = this.el.components.song;
-    if (this.preloadTime === undefined) {
-      if (!song.isAudioPlaying) { return; }
-      // Get current song time.
-      songTime = song.getCurrentTime() * 1000 + skipDebug;
-    } else {
-      // Song is not playing and is preloading beats, use maintained beat time.
-      songTime = this.preloadTime;
-    }
-
-    const bpm = this.beatData._beatsPerMinute;
+    let songTime = this.song.getCurrentTime() * 1000;
     const msPerBeat = 1000 * 60 / this.beatData._beatsPerMinute;
 
     // Load in stuff scheduled between the last timestamp and current timestamp.
@@ -247,17 +225,6 @@ AFRAME.registerComponent('beat-generator', {
       } else {
         break; // events are sorted by time, so we can break early
       }
-    }
-
-    if (this.preloadTime === undefined) { return; }
-
-    if (this.preloadTime >= BEAT_PRELOAD_TIME * 1000) {
-      // Finished preload.
-      this.el.sceneEl.emit('beatloaderpreloadfinish', null, false);
-      this.preloadTime = undefined;
-    } else {
-      // Continue preload.
-      this.preloadTime += delta;
     }
   },
 
@@ -309,24 +276,22 @@ AFRAME.registerComponent('beat-generator', {
 
     // Factor in sword offset and beat anticipation time (percentage).
     const weaponOffset = this.data.gameMode === 'classic' ? SWORD_OFFSET : PUNCH_OFFSET;
-    const positionOffset =
-      ((weaponOffset / data.speed) + BEAT_ANTICIPATION_TIME) /
-      data.songDuration;
+    const positionOffset_s = ((weaponOffset / data.speed) + BEAT_ANTICIPATION_TIME);
 
-    // Song position is from 0 to 1 along the curve (percentage).
-    const durationMs = data.songDuration * 1000;
-    const msPerBeat = 1000 * 60 / this.beatData._beatsPerMinute;
-    const songPosition = ((noteInfo._time * msPerBeat) / durationMs) + positionOffset;
+    // Song position is from 0 to 1 along the curve (percentage). 
+    const secondsPerBeat = 60 / this.beatData._beatsPerMinute;
+    const beatTime = (noteInfo._time * secondsPerBeat) + positionOffset_s;
 
+    const mapPosition = this.songTimeToMapProgress(beatTime);
     // Set render order (back to front so decreasing render order as index increases).
-    const renderOrder = this.el.systems['render-order'].order.beats + 1 - songPosition;
+    const renderOrder = this.el.systems['render-order'].order.beats + 1 - mapPosition;
 
     if (data.gameMode === 'ride') {
-      beatEl.components.plume.onGenerate(songPosition, horizontalPosition, verticalPosition,
+      beatEl.components.plume.onGenerate(mapPosition, horizontalPosition, verticalPosition,
         this.playerHeight.beatOffset);
       beatEl.setAttribute('render-order', renderOrder);
     } else {
-      beatEl.components.beat.onGenerate(songPosition, horizontalPosition, verticalPosition,
+      beatEl.components.beat.onGenerate(mapPosition, horizontalPosition, verticalPosition,
         cutDirection, this.playerHeight.beatOffset);
       beatEl.components.beat.blockEl.object3D.renderOrder = renderOrder;
     }
@@ -363,21 +328,18 @@ AFRAME.registerComponent('beat-generator', {
     const width = wallInfo._width / 2; // We want half the reported width.
 
     // Factor in beat anticipation time (percentage).
-    const positionOffset = (BEAT_ANTICIPATION_TIME) / data.songDuration;
+    const positionOffset_s = (BEAT_ANTICIPATION_TIME);
 
-    // Song position is from 0 to 1 along the curve (percentage).
-    const durationMs = data.songDuration * 1000;
-    const msPerBeat = 1000 * 60 / this.beatData._beatsPerMinute;
-    const songPosition = (wallInfo._time * msPerBeat) / durationMs + positionOffset;
-
-    const lengthPercent = length / this.curveEl.components.supercurve.length;
-    wallEl.components.wall.onGenerate(songPosition, horizontalPosition, width, length,
-      isCeiling, songPosition + lengthPercent);
+    // Song position is from 0 to 1 along the curve (percentage).  
+    const songPositionTime = (wallInfo._time * 60 / this.beatData._beatsPerMinute) + positionOffset_s;
+    const mapPosition = this.songTimeToMapProgress(songPositionTime);
+    const mapPositionEnd = this.songTimeToMapProgress(songPositionTime + durationSeconds);
+    wallEl.components.wall.onGenerate(mapPosition, horizontalPosition, width, length,
+      isCeiling, mapPositionEnd);
 
     // Set render order (back to front so decreasing render order as index increases).
     // For walls, set as the back end of the wall.
-    wallEl.object3D.renderOrder = this.el.systems['render-order'].order.beats + 1 -
-      (songPosition + lengthPercent);
+    wallEl.object3D.renderOrder = this.el.systems['render-order'].order.beats + 1 - mapPositionEnd;
   },
 
   generateEvent: function (time, event) {
@@ -451,7 +413,6 @@ AFRAME.registerComponent('beat-generator', {
    */
   onClearGame: function () {
     console.log("Clearing game");
-    this.preloadTime = 0;
     this.index.events = 0;
     this.index.notes = 0;
     this.index.obstacles = 0;
@@ -478,9 +439,11 @@ AFRAME.registerComponent('beat-generator', {
   restartGame: function () {
     this.gameCleared = false;
     const data = this.data;
-    // Generate curve based on song duration.
-    this.curveEl.components.supercurve.generateCurve(data.speed * data.songDuration);
-    this.curve = this.curveEl.components.supercurve.curve;
+    this.mapDuration = this.data.challengeInfo.duration + MAP_WARMUP_TIME;
+
+    // Generate curve based on MAP duration.
+    this.supercurve.generateCurve(data.speed * this.mapDuration);
+
     if (this.wallsCache.length > 0)
       console.warn("wallsCache not empty on restart");
     this.wallsCache = {};
@@ -525,7 +488,61 @@ AFRAME.registerComponent('beat-generator', {
       return false;
     }
     this.eventAllowedTime[event._type] = time + this.eventCooldown[event._type];
-  }
+  },
+  /// songTime can be negative meaning the time before song starts
+  songTimeToMapProgress: function (songTime) {
+    const mapProgress = (songTime + MAP_WARMUP_TIME) / this.mapDuration;
+    return Math.min(1, Math.max(0, mapProgress)); // clamp between 0 and 1
+  },
+  songProgressToMapProgress: function (songProgress) {
+    return this.songTimeToMapProgress(songProgress * this.data.challengeInfo.duration);
+  },
+  getCurrentMapProgress: function () {
+    // songTime is negative during warmup
+    return this.songTimeToMapProgress(this.song.getCurrentTime());
+  },
+  mapTimeToMapProgress: function (mapTime) {
+    return mapTime / this.mapDuration;
+  },
+  mapDistanceToMapProgress: function (mapDistance) {
+    return mapDistance / this.supercurve.length;
+  },
+  /**
+   * getPointAt given songProgress ( from 0 to 1 ) return the point in the map curve.
+   */
+  getPointAtSongProgress: function (songProgress, vec3) {
+    const percent = this.songProgressToMapProgress(songProgress);
+    this.supercurve.getPointAt(percent, vec3);
+  },
+
+  /**
+   * getTangentAt point in the map curve.
+   */
+  getTangentAtSongProgress: function (songProgress, vec3) {
+    const percent = this.songProgressToMapProgress(songProgress);
+    this.supercurve.getTangentAt(percent, vec3);
+  },
+
+  /**
+   * Given a percent (from 0 to 1) along the map curve, transform a position relative to the
+   * point along the curve and along the tangent. Such that the negative Z-axis points
+   * straight down the tangent.
+   */
+  getPositionRelativeToTangentAtSongProgress: function (songProgress, position, target, reverseLookAt) {
+    const percent = this.songProgressToMapProgress(songProgress);
+    this.supercurve.getPositionRelativeToTangent(percent, position, target, reverseLookAt);
+  },
+
+  /**
+   * Align object3D to tangent at a certain spot on the curve.
+   */
+  alignToCurveAtSongProgress: function (songProgress, object3D) {
+    const percent = this.songProgressToMapProgress(songProgress);
+    this.supercurve.alignToCurve(percent, object3D);
+  },
+
+  
+
 });
 
 function lessThan(a, b) { return a._time - b._time; }

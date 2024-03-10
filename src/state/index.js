@@ -72,8 +72,7 @@ AFRAME.registerState({
       difficulty: '',
       beatmapCharacteristic: '',
       id: AFRAME.utils.getUrlParameter('challenge'),  // Will be empty string if not playing.
-      image: '',
-      isBeatsPreloaded: false,  // Whether we have passed the negative time.
+      image: '', 
       numBeats: undefined,
       songDuration: 0,
       songName: '',
@@ -225,12 +224,7 @@ AFRAME.registerState({
       state.score.beatsMissed++;
       takeDamage(state);
       updateScoreAccuracy(state);
-    },
-
-    beatloaderpreloadfinish: state => {
-      if (state.menuActive) { return; }  // Cancelled.
-      state.challenge.isBeatsPreloaded = true;
-    },
+    }, 
 
     colorschemechange: (state, payload) => {
       state.colorScheme = payload;
@@ -384,7 +378,6 @@ AFRAME.registerState({
 
     gamemenurestart: state => {
       resetScore(state);
-      state.challenge.isBeatsPreloaded = false;
       state.isGameOver = false;
       state.isPaused = false;
       state.isLoading = true;
@@ -404,7 +397,6 @@ AFRAME.registerState({
 
     gamemenuexit: state => {
       resetScore(state);
-      state.challenge.isBeatsPreloaded = false;
       state.isGameOver = false;
       state.isPaused = false;
       state.isVictory = false;
@@ -767,7 +759,6 @@ AFRAME.registerState({
 
       // Move back to menu in Ride or Viewer Mode.
       if (state.gameMode === 'ride' || !state.inVR) {
-        state.challenge.isBeatsPreloaded = false;
         state.isVictory = false;
         state.menuActive = true;
         state.challenge.id = '';
@@ -840,7 +831,6 @@ AFRAME.registerState({
     },
 
     songloadcancel: state => {
-      state.challenge.isBeatsPreloaded = false;
       // Unset selected challenge.
       state.challenge.audio = '';
       state.challenge.id = '';
@@ -859,7 +849,6 @@ AFRAME.registerState({
       state.loadingText = 'Sorry! There was an error loading this song.\nPlease select another song.';
 
       state.challenge.id = '';
-      state.challenge.isBeatsPreloaded = false;
       state.isSongProcessing = false;
       state.isZipFetching = false;
     },
@@ -927,7 +916,6 @@ AFRAME.registerState({
     },
 
     ziploaderstart: state => {
-      state.challenge.isBeatsPreloaded = false;
       state.isZipFetching = true;
     },
 

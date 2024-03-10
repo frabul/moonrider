@@ -6,7 +6,7 @@ AFRAME.registerComponent('song-progress-info', {
   },
 
   init: function () {
-    this.tick = AFRAME.utils.throttleTick(this.tick.bind(this), 1000);
+    this.tick = AFRAME.utils.throttleTick(this.tick.bind(this), 997); // odd number to spread out the workload
 
     this.progress = this.el.getObject3D('mesh');
     this.progress.geometry.translate(0.285, 0, 0);
@@ -23,9 +23,7 @@ AFRAME.registerComponent('song-progress-info', {
     const source = this.el.sceneEl.components.song.source;
     if (!source || !source.buffer) { return; }
 
-    const progress =
-    this.el.sceneEl.components.song.getCurrentTime() /
-    source.buffer.duration;
+    const progress = this.el.sceneEl.components['beat-generator'].getCurrentMapProgress();
 
     if (!progress) { return; }
     this.progress.scale.x = progress;

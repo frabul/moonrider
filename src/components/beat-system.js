@@ -43,6 +43,7 @@ AFRAME.registerComponent('beat-system', {
         this.supercurveFollow = null;
         this.beatEventsQueue = [];
         this.el.sceneEl.addEventListener('loadMap', () => {
+            this.beatGenerator = this.el.sceneEl.components['beat-generator'];
             this.updateBeatPositioning();
             this.weaponOffset = this.data.gameMode === CLASSIC ? SWORD_OFFSET : PUNCH_OFFSET;
             this.weaponOffset = this.weaponOffset * 1.5 / this.supercurve.curve.getLength();
@@ -80,11 +81,10 @@ AFRAME.registerComponent('beat-system', {
                 this.el.sceneEl.emit('beatwrong', evData, true);
         }
         // check for collisions
-        if (!this.data.isPlaying || this.data.gameMode === RIDE) { return; }
+        if (!this.data.isPlaying || this.data.gameMode === RIDE || !this.beatGenerator) { return; }
 
-        const beatsToCheck = this.beatsToCheck;
-        const curve = this.supercurve.curve;
-        const progress = this.supercurveFollow.songProgress;
+        const beatsToCheck = this.beatsToCheck; 
+        const mapProgress = this.beatGenerator.getCurrentMapProgress();
 
         // Filter for beats that should be checked for collisions.
         beatsToCheck.length = 0;
@@ -104,8 +104,8 @@ AFRAME.registerComponent('beat-system', {
             }
  
             // Check if beat is close enough to be hit.
-            const beatProgress = beat.songPosition - this.weaponOffset;
-            if (progress < beatProgress) { continue; }
+            const progressForBeatToBeReachable = beat.mapProgress - this.weaponOffset;
+            if (mapProgress < progressForBeatToBeReachable) { continue; }
 
 
             // Check if beat should be filtered out due to not being in front.

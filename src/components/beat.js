@@ -61,19 +61,13 @@ AFRAME.registerComponent('beat', {
   init: function () {
     this.bbox = new THREE.Box3();
     this.geometryBoundingBox = null;
-    this.beatSystem = this.el.sceneEl.components['beat-system'];
     this.broken = null;
     this.brokenPoolName = undefined;
     this.destroyed = false;
     this.poolName = undefined;
     this.returnToPoolTimer = DESTROY_TIME;
-    this.warmupTime = 0;;
-    this.curveEl = document.getElementById('curve');
-    this.curveFollowRig = document.getElementById('curveFollowRig');
-    this.mineParticles = document.getElementById('mineParticles');
+    this.warmupTime = 0;
     this.rigContainer = document.getElementById('rigContainer');
-    this.verticalPositions = this.beatSystem.verticalPositions;
-
 
 
     this.explodeEventDetail = {
@@ -89,8 +83,13 @@ AFRAME.registerComponent('beat', {
     this.blockEl = document.createElement('a-entity');
     this.blockEl.setAttribute('mixin', 'beatBlock');
     this.el.appendChild(this.blockEl);
-    this.initMesh();
 
+    // these needs to be set after scene is loaded 
+    this.beatSystem = this.el.sceneEl.components['beat-system'];
+    this.beatGenerator = this.el.sceneEl.components['beat-generator'];
+    this.verticalPositions = this.beatSystem.verticalPositions;
+
+    this.initMesh();
 
     if (this.data.type === MINE) {
       this.poolName = 'pool__beat-mine';
@@ -102,7 +101,7 @@ AFRAME.registerComponent('beat', {
   tick: function (time, timeDelta) {
     const el = this.el;
     const data = this.data;
- 
+
     if (this.destroyed) {
       this.returnToPoolTimer -= timeDelta;
       if (this.returnToPoolTimer <= 0) { this.returnToPool(); }
@@ -124,7 +123,7 @@ AFRAME.registerComponent('beat', {
    * Called when summoned by beat-generator.
    * Called after updatePosition.
    */
-  onGenerate: function (songPosition, horizontalPosition, verticalPosition, cutDirection, heightOffset) {
+  onGenerate: function (mapProgress, horizontalPosition, verticalPosition, cutDirection, heightOffset) {
     const data = this.data;
     const el = this.el;
     // Model is 0.29 size. We make it 1.0 so we can easily scale based on 1m size.
@@ -136,7 +135,7 @@ AFRAME.registerComponent('beat', {
     this.cutDirection = cutDirection;
     this.horizontalPosition = horizontalPosition;
     this.verticalPosition = verticalPosition;
-    this.songPosition = songPosition;
+    this.mapProgress = mapProgress;
 
     if (!this.blockEl) {
       console.warn('Unable to generate beat. blockEl was undefined.');
@@ -149,10 +148,9 @@ AFRAME.registerComponent('beat', {
 
     this.warmupTime = 0;
 
-    // Set position.
-    const supercurve = this.curveEl.components.supercurve;
-    supercurve.getPointAt(songPosition, el.object3D.position);
-    supercurve.alignToCurve(songPosition, el.object3D);
+    // Set position. 
+    this.beatGenerator.supercurve.getPointAt(mapProgress, el.object3D.position);
+    this.beatGenerator.supercurve.alignToCurve(mapProgress, el.object3D);
     el.object3D.position.x += this.beatSystem.horizontalPositions[horizontalPosition];
 
     if (data.type !== DOT) {
@@ -198,7 +196,9 @@ AFRAME.registerComponent('beat', {
     this.geometryBoundingBox = mesh.geometry.boundingBox;
 
     if (this.data.type === 'mine') {
-        this.geometryBoundingBox.set(this.geometryBoundingBox.min.multiplyScalar(0.5), this.geometryBoundingBox.max.multiplyScalar(0.5));
+      this.geometryBoundingBox.set(
+        this.geometryBoundingBox.min.multiplyScalar(0.5),
+        this.geometryBoundingBox.max.multiplyScalar(0.5));
     }
 
     // for debug add a-plane to this entity

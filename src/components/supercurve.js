@@ -1,7 +1,7 @@
 require('../../vendor/Curve');
 require('../../vendor/CatmullRomCurve3');
 
-const EXTRA_LENGTH = 200;
+const EXTRA_LENGTH = 0;
 const CURVE_SAMPLES = 250;
 const CURVE_SECTION_LENGTH = 100;
 const X_MAX_DEVIATION = 10;
@@ -11,8 +11,6 @@ const WIDTH = 3;
 const positionVec3 = new THREE.Vector3();
 const normalVec3 = new THREE.Vector3();
 
-let skipDebug = AFRAME.utils.getUrlParameter('skip') || 0;
-skipDebug = parseInt(skipDebug, 10);
 /**
  * For some reason, the front face is the bottom.
  */
@@ -112,8 +110,6 @@ AFRAME.registerComponent('supercurve', {
     const leftOffset = new THREE.Vector3(-1 * WIDTH / 2, 0, -1 * segmentLength / 2);
     const rightOffset = new THREE.Vector3(WIDTH / 2, 0, -1 * segmentLength / 2);
 
-    const halfSegmentLengthPercent = (segmentLength / 2) / length;
-
     // Add points, two tris at a time, by adding two vertices at a time to front of the curve.
     for (let i = 0; i < points.length; i++) {
       const percent = i / (points.length - 1);
@@ -201,7 +197,6 @@ AFRAME.registerComponent('supercurve', {
     const tangent = new THREE.Vector3();
 
     return function (percent, position, target, reverseLookAt) {
-      const curve = this.curve;
 
       if (!helperObj3D.parent) { this.el.sceneEl.object3D.add(helperObj3D); }
 
@@ -230,8 +225,6 @@ AFRAME.registerComponent('supercurve', {
    * Align object3D to tangent at a certain spot on the curve.
    */
   alignToCurve: (function () {
-    const curvePosition = new THREE.Vector3();
-    const tangent = new THREE.Vector3();
     const lookAt = new THREE.Vector3(0, 0, -0.01);
     const lookAtTarget = new THREE.Vector3();
 
@@ -266,10 +259,10 @@ AFRAME.registerComponent('supercurve-follow', {
 
   init: function () {
     this.curveProgress = 0;
-    this.songProgress = 0;
+    this.mapProgress = 0;
     // give time to setup the scene
     setTimeout(() => {
-      this.song = document.querySelector('a-scene').components.song;
+      this.beatGenerator = document.querySelector('a-scene').components['beat-generator'];
     }, 200);
   },
 
@@ -277,36 +270,21 @@ AFRAME.registerComponent('supercurve-follow', {
     this.supercurve = this.data.target.components.supercurve;
   },
 
-  tick: (function () {
-    const lookAt = new THREE.Vector3(0, 0, 1);
-    const lookAtTarget = new THREE.Vector3();
+  tick: function (t, dt) {
+    const data = this.data;
+    if (!data.enabled)
+      return;
 
-    return function (t, dt) {
-      const data = this.data;
-      const el = this.el;
+    this.mapProgress = this.beatGenerator.getCurrentMapProgress();
 
-      if (!data.enabled) { return; }
-
-      if (this.curveProgress >= 1) { return; }
-
-      const supercurve = this.supercurve;
-
-      // Update progress based on speed.
-      this.songProgress = this.song.getCurrentProgress();
-      this.curveProgress = supercurve.songProgressToCurveProgress(this.songProgress);
-      this.data.target.components.material.material.uniforms.cameraPercent.value =
-        this.curveProgress;
-
-      if (this.curveProgress >= 1) {
-        this.curveProgress = 1;
-        this.data.target.components.material.material.uniforms.cameraPercent.value =
-          this.curveProgress;
-        return;
-      }
-
-      // Update lookAt down the tangent.
-      supercurve.getPointAt(this.songProgress, this.el.object3D.position);
-      supercurve.alignToCurve(this.songProgress, this.el.object3D);
-    };
-  })()
+    const supercurve = this.supercurve;
+    if (this.mapProgress >= 1) {
+      this.mapProgress = 1;
+    }
+    //this.data.target.components.material.material.uniforms.cameraPercent.value =
+    //  this.mapProgress;
+    // Update lookAt down the tangent.
+    supercurve.getPointAt(this.mapProgress, this.el.object3D.position);
+    supercurve.alignToCurve(this.mapProgress, this.el.object3D);
+  }
 });

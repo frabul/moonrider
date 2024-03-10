@@ -30,7 +30,6 @@ AFRAME.registerComponent('song', {
     audio: { type: 'string' }, // Blob URL.
     analyserEl: { type: 'selector', default: '#audioAnalyser' },
     challengeId: { default: '' },
-    isBeatsPreloaded: { default: false },
     isGameOver: { default: false },
     isLoading: { default: false },
     isPlaying: { default: false },
@@ -59,8 +58,7 @@ AFRAME.registerComponent('song', {
         this.el.sceneEl.emit('songprocessfinish', null, false);
       }, 50);
     });
-    //this.el.sceneEl.addEventListener('gamemenurestart', this.startSong.bind(this));
-    this.el.sceneEl.addEventListener('startSong', this.startSong.bind(this));
+    
 
     if (process.env.NODE_ENV !== 'production') {
       this.el.addEventListener('victoryfake', () => {
@@ -199,34 +197,34 @@ AFRAME.registerComponent('song', {
     }).catch(console.error);
   },
 
-  startPlayingSong: function () {
+  startPlayingSong: function (warmUpTime) {
     if (this.isAudioPlaying) { return; }
     this.audioAnalyser.resumeContext();
     this.isAudioPlaying = true;
     // Restart, get new buffer source node and play.
     console.log('Starting playback ' + this.loadedAudio);
-    this.songStartTime = this.context.currentTime;
+
     this.source.onended = this.onSongComplete;
     // Clear gain interpolation values from game over.
     const gain = this.audioAnalyser.gainNode.gain;
     gain.cancelScheduledValues(0);
     this.audioAnalyser.gainNode.gain.value = BASE_VOLUME;
-
-    this.source.start(0, skipDebug || 0);
+    this.songStartTime = this.context.currentTime + warmUpTime;
+    this.source.start(this.context.currentTime + warmUpTime, skipDebug || 0);
   },
   // starts ( or restarts ) the song
-  startSong: function () { //startAudio onRestart
+  startSong: function (warmUpTime) { //startAudio onRestart
     if (this.isPlaying) {
       this.stopAudio();
-      this.loadSong(() => { this.startPlayingSong(); });
+      this.loadSong(() => { this.startPlayingSong(warmUpTime); });
     } else {
-      this.startPlayingSong();
+      this.startPlayingSong(warmUpTime);
     }
   },
 
   getCurrentTime: function () {
     if (!this.isAudioPlaying) { return 0; }
-    const dt = this.context.currentTime - this.songStartTime;
+    const dt = this.context.currentTime - this.songStartTime + skipDebug;
     return Math.min(dt, this.data.duration);
   },
   getCurrentProgress: function () {

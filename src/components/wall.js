@@ -19,17 +19,20 @@ AFRAME.registerComponent('wall', {
   dependencies: ['material'],
 
   init: function () {
-    this.curveEl = document.getElementById('curve');
-    this.curveFollowRig = document.getElementById('curveFollowRig');
     this.el.setObject3D('mesh', new THREE.Mesh());
     this.geometry = null;
     this.isCeiling = false;
     this.isRaycastable = false;
     this.localPosition = new THREE.Vector3();
-    this.songPosition = undefined;
     this.tick = AFRAME.utils.throttleTick(this.tick.bind(this), 1000);
     this.zrange = new z_range(-0.5, 0.5);
     this.isOnTheScene = false;
+
+    // these need to be set after scene is loaded
+    //setTimeout(() => {
+      this.beatSystem = this.el.sceneEl.components['beat-system'];
+      this.beatGenerator = this.el.sceneEl.components['beat-generator']; 
+    //}, 50);
 
   },
 
@@ -46,10 +49,9 @@ AFRAME.registerComponent('wall', {
     this.isOnTheScene = true;
   },
 
-  tick: function (time, timeDelta) {
-    const songProgress = this.curveFollowRig.components['supercurve-follow'].songProgress;
-
-    if (!this.isRaycastable && songProgress + 0.01 >= this.songPosition) {
+  tick: function (time, timeDelta) {  
+    const mapProgress = this.beatGenerator.getCurrentMapProgress();
+    if (!this.isRaycastable && mapProgress + 0.01 >= this.mapPosition) {
       this.isRaycastable = true;
       this.el.setAttribute('data-wall-active', '');
       if (!this.isCeiling) {
@@ -58,18 +60,18 @@ AFRAME.registerComponent('wall', {
       }
     }
 
-    if (songProgress >= this.backPosition + 0.01) {
+    if (mapProgress >= this.backPosition + 0.01) {
       this.returnToPool();
     }
   },
 
-  onGenerate: function (songPosition, horizontalPosition, width, length, isCeiling, backPosition) {
+  onGenerate: function (mapPosition, horizontalPosition, width, length, isCeiling, backPosition) {
     console.log('wall onGenerate, name ' + this.el.wallName);
     const el = this.el;
     this.isCeiling = isCeiling;
     this.backPosition = backPosition;
-    this.songPosition = songPosition;
-    this.setWallGeometry(songPosition, horizontalPosition, width, length, isCeiling);
+    this.mapPosition = mapPosition;
+    this.setWallGeometry(mapPosition, horizontalPosition, width, length, isCeiling);
     el.getObject3D('mesh').material.uniforms.opacity.value = 0;
     el.object3D.position.y = -5;
 
@@ -84,13 +86,13 @@ AFRAME.registerComponent('wall', {
     const left = new THREE.Vector3();
     const right = new THREE.Vector3();
 
-    return function (songPosition, horizontalPosition, width, length, isCeiling) {
+    return function (mapPosition, horizontalPosition, width, length, isCeiling) {
       const beatSystem = this.el.sceneEl.components['beat-system'];
-      const supercurve = this.curveEl.components.supercurve;
+      const supercurve = this.beatSystem.supercurve;
 
       const lengthPercent = length / supercurve.length;
-      const startPercent = songPosition;
-      const endPercent = songPosition + lengthPercent;
+      const startPercent = mapPosition;
+      const endPercent = mapPosition + lengthPercent;
 
       const height = isCeiling ? CEILING_THICKNESS : HEIGHT;
 
@@ -103,7 +105,7 @@ AFRAME.registerComponent('wall', {
       right.x = centerPosition + (width / 2);
 
       // TODO: Reuse box.
-      const geo = this.geometry = new THREE.BoxBufferGeometry(width, height, 1, 1, 1, Math.ceil(length/1.5) + 1);
+      const geo = this.geometry = new THREE.BoxBufferGeometry(width, height, 1, 1, 1, Math.ceil(length / 1.5) + 1);
       const positions = geo.attributes.position.array;
       for (let i = 0; i < positions.length; i += 3) {
         // Add half length (which will always be 1 / 2) for the box geometry offset.

@@ -9,15 +9,12 @@ AFRAME.registerComponent('tunnels', {
   dependencies: ['pool_tunnels'],
 
   schema: {
-    isPlaying: { default: false },
-    songDuration: { default: 0 }
+    isPlaying: { default: false }
   },
 
   init: function () {
     this.addTunnel = this.addTunnel.bind(this);
     this.clearTunnels = this.clearTunnels.bind(this);
-    this.curveEl = document.getElementById('curve');
-    this.curveFollowRig = document.getElementById('curveFollowRig');
     this.timeout = 0;
     this.tunnels = [];
 
@@ -30,6 +27,7 @@ AFRAME.registerComponent('tunnels', {
 
   update: function (oldData) {
     if (!oldData.isPlaying && this.data.isPlaying) {
+      this.beatGenerator = this.el.sceneEl.components['beat-generator'];
       this.requestTunnel();
     }
     if (oldData.isPlaying && !this.data.isPlaying && this.timeout) {
@@ -57,19 +55,19 @@ AFRAME.registerComponent('tunnels', {
       if (templateEl && templateEl.getObject3D('mesh'))
         this.templateGeometry = templateEl.getObject3D('mesh').children[0].geometry;
     }
-    if(!this.templateGeometry) { return; }
+    if (!this.templateGeometry) { return; }
     if (!tunnel.getObject3D('mesh')) { tunnel.setObject3D('mesh', new THREE.Mesh()); }
     tunnel.getObject3D('mesh').geometry = this.templateGeometry;
     tunnel.setAttribute('render-order', 'tunnel');
     tunnel.object3D.visible = true;
 
-    const supercurve = this.curveEl.components.supercurve;
-    let songPosition = (this.el.components.song.getCurrentTime() + SPAWN_DISTANCE) /
-      this.data.songDuration;
-    if (songPosition > 1) { songPosition = 1; }
-    supercurve.getPointAt(songPosition, tunnel.object3D.position);
-    supercurve.alignToCurve(songPosition, tunnel.object3D);
 
+    let mapPosition = this.beatGenerator.getCurrentMapProgress() + this.beatGenerator.mapTimeToMapProgress(SPAWN_DISTANCE);
+    tunnel.mapPosition = mapPosition;
+    if (mapPosition > 1) { mapPosition = 1; }
+    this.beatGenerator.supercurve.getPointAt(mapPosition, tunnel.object3D.position);
+    this.beatGenerator.supercurve.alignToCurve(mapPosition, tunnel.object3D);
+    console.log('adding tunnel at ' + mapPosition);
     tunnel.play();
     this.tunnels.push(tunnel);
     this.requestTunnel();
@@ -91,14 +89,14 @@ AFRAME.registerComponent('tunnels', {
   tick: function (time, delta) {
     if (this.tunnels.length == 0) { return; }
 
+    const mapPosition = this.beatGenerator.getCurrentMapProgress();
     // Remove tunnels that went behind the player.
     for (let i = 0; i < this.tunnels.length; i++) {
-      if (this.tunnels[i].object3D.position.z >
-        this.curveFollowRig.object3D.position.z + 5) {
+      if (mapPosition * 1.01 > this.tunnels[i].mapPosition) {
+        console.log('returning tunnel');
         const tunnel = this.tunnels.splice(i, 1)[0];
         tunnel.object3D.visible = false;
         this.pool.returnEntity(tunnel);
-        console.log('returning tunnel');
       } else {
         // They're z-ordered, the rest of tunnels are in front of the player.
         return;
